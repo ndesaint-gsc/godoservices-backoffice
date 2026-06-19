@@ -1,0 +1,154 @@
+import { useContext, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  Divider,
+  List,
+  ListItem,
+  Paper,
+  Stack,
+  Typography,
+} from '@mui/material';
+import { useSnackbar } from 'notistack';
+import { selectCustomer, setCustomer } from '@/common/features/customer/customerSlice';
+import { useHasPrivilege } from '@/common/permissions/useHasPrivilege';
+import { Priv } from '@/common/permissions/privileges';
+import { ModalContext } from '@/common/providers/ModalProvider';
+import userService from '@/services/user.service';
+import subscriptionsService from '@/services/subscriptions.service';
+
+const formatDate = (milliseconds) => {
+  if (!milliseconds) return null;
+  const date = new Date(milliseconds);
+  return Number.isNaN(date.getTime()) ? String(milliseconds) : date.toLocaleDateString('es-ES');
+};
+
+const readErrorMessage = (error) => {
+  const rawMessage = error?.message || '';
+  const jsonPart = rawMessage.slice(rawMessage.indexOf('{'));
+  try {
+    return JSON.parse(jsonPart).errorMessage || rawMessage;
+  } catch {
+    return rawMessage;
+  }
+};
+
+const Accesos = () => {
+  const dispatch = useDispatch();
+  const { enqueueSnackbar } = useSnackbar();
+  const modal = useContext(ModalContext);
+  const customer = useSelector(selectCustomer);
+  const canEdit = useHasPrivilege(Priv.EDIT_SUSCRIPCIONES);
+  const [revoking, setRevoking] = useState(false);
+
+  const evUser = customer?.raw?.evUser || {};
+  const roleAssignments = evUser.roleAssignments || [];
+
+  const refreshCustomer = async () => {
+    const freshCustomer = await userService.searchByEmail(evUser.guid);
+    if (freshCustomer) dispatch(setCustomer(freshCustomer));
+  };
+
+  const confirmRevoke = (roleAssignment) => {
+    modal.show({
+      title: 'Revocar acceso temporal',
+      content: `Se va a revocar el acceso con el rol ${roleAssignment.roleName}. ¿Continuar?`,
+      confirmText: 'Revocar',
+      variant: 'error',
+      onSubmit: async () => {
+        setRevoking(true);
+        try {
+          await subscriptionsService.revokeRole(roleAssignment.roleName, evUser);
+          enqueueSnackbar('Acceso revocado', { variant: 'success' });
+          await refreshCustomer();
+        } catch (error) {
+          enqueueSnackbar('Error: ' + readErrorMessage(error), { variant: 'error' });
+        } finally {
+          setRevoking(false);
+        }
+      },
+    });
+  };
+
+  const notifyCreatePending = () =>
+    enqueueSnackbar(
+      'Crear acceso temporal requiere el catálogo de roles (servido como HTML en el BO antiguo); pendiente de JSON.',
+      { variant: 'info' },
+    );
+
+  return (
+    <Paper variant="outlined" sx={{ p: { xs: 3, md: 4 } }}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
+        <Box>
+          <Typography variant="overline" color="text.secondary">
+            Suscripciones
+          </Typography>
+          <Typography variant="h6" sx={{ mt: 0.25 }}>
+            Accesos temporales
+          </Typography>
+        </Box>
+        {canEdit && (
+          <Button variant="contained" onClick={notifyCreatePending}>
+            Crear acceso temporal
+          </Button>
+        )}
+      </Stack>
+
+      {roleAssignments.length === 0 ? (
+        <Typography variant="body2" color="text.secondary">
+          No hay accesos digitales temporales a mostrar.
+        </Typography>
+      ) : (
+        <List disablePadding>
+          {roleAssignments.map((roleAssignment, index) => {
+            const isTemporal = roleAssignment.endDate > 0;
+            return (
+              <Box key={roleAssignment.roleName + index}>
+                {index > 0 && <Divider />}
+                <ListItem
+                  disableGutters
+                  sx={{ py: 1.5, display: 'flex', justifyContent: 'space-between', gap: 2 }}
+                  secondaryAction={
+                    canEdit && isTemporal ? (
+                      <Button
+                        size="small"
+                        color="error"
+                        variant="outlined"
+                        disabled={revoking}
+                        onClick={() => confirmRevoke(roleAssignment)}
+                      >
+                        Revocar
+                      </Button>
+                    ) : null
+                  }
+                >
+                  <Box>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <Typography sx={{ fontWeight: 600 }}>{roleAssignment.roleName}</Typography>
+                      {!isTemporal && <Chip size="small" label="Permanente" variant="outlined" />}
+                    </Stack>
+                    <Typography variant="body2" color="text.secondary">
+                      Desde {formatDate(roleAssignment.startDate) || '—'}
+                      {isTemporal ? ` · Hasta ${formatDate(roleAssignment.endDate)}` : ''}
+                    </Typography>
+                  </Box>
+                </ListItem>
+              </Box>
+            );
+          })}
+        </List>
+      )}
+
+      <Alert severity="info" variant="outlined" sx={{ mt: 3 }}>
+        La creación de accesos temporales requiere el catálogo de roles asignables
+        (servido como HTML en el backoffice antiguo). Se añadirá cuando esté disponible
+        como JSON.
+      </Alert>
+    </Paper>
+  );
+};
+
+export default Accesos;

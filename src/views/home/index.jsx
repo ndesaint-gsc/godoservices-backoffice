@@ -8,17 +8,17 @@ import { getLandingRoute } from '@/common/router/getLandingRoute';
 
 const Home = () => {
   const hasCustomer = useSelector(selectHasCustomer);
-  const userRoles = useSelector((s) => s.auth.user?.roles || []);
+  const userRoles = useSelector((state) => state.auth.user?.roles || []);
 
-  const target = getLandingRoute(userRoles, hasCustomer);
+  const landingRoute = getLandingRoute(userRoles, hasCustomer);
 
   useEffect(() => {
-    if (target !== '/') return;
-    const input = document.querySelector('input[aria-label="Buscar usuario"]');
-    if (input) input.focus();
-  }, [target]);
+    if (landingRoute !== '/') return;
+    const searchInput = document.querySelector('input[aria-label="Buscar usuario"]');
+    if (searchInput) searchInput.focus();
+  }, [landingRoute]);
 
-  if (target !== '/') return <Navigate to={target} replace />;
+  if (landingRoute !== '/') return <Navigate to={landingRoute} replace />;
 
   return (
     <Box

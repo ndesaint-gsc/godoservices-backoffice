@@ -1,7 +1,7 @@
 import { useSelector } from 'react-redux';
 import { hasPrivilege } from '@/common/permissions/privileges';
 
-export const useHasPrivilege = (priv) => {
-  const userRoles = useSelector((s) => s.auth.user?.roles || []);
-  return hasPrivilege(userRoles, priv);
+export const useHasPrivilege = (privilege) => {
+  const userRoles = useSelector((state) => state.auth.user?.roles || []);
+  return hasPrivilege(userRoles, privilege);
 };

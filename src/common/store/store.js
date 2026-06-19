@@ -22,6 +22,9 @@ const rootReducer = (state, action) => {
 const persistConfig = {
   key: PERSIST_KEY,
   storage,
+  // auth (session) + the inspected customer are persisted, so a reload keeps the
+  // loaded customer. Pages read the customer from the store; saves update the
+  // store (setCustomer) so the persisted copy stays in sync.
   whitelist: ['auth', 'customer'],
 };
 

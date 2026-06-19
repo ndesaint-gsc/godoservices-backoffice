@@ -32,17 +32,21 @@ import userService from '@/services/user.service';
 
 const IS_DEV = import.meta.env.DEV;
 
-const CUSTOMER_SCOPED_PATHS = ['/data', '/subscriptions', '/invoices'];
+const CUSTOMER_SCOPED_PATHS = ['/datos', '/suscripciones', '/notificaciones', '/facturacion'];
 
-const rolesEqual = (a = [], b = []) =>
-  a.length === b.length && [...a].sort().join('|') === [...b].sort().join('|');
+const isCustomerScoped = (pathname) =>
+  CUSTOMER_SCOPED_PATHS.some((basePath) => pathname === basePath || pathname.startsWith(basePath + '/'));
 
-const initials = (str = '') =>
-  str
+const sameRoles = (firstRoles = [], secondRoles = []) =>
+  firstRoles.length === secondRoles.length &&
+  [...firstRoles].sort().join('|') === [...secondRoles].sort().join('|');
+
+const getInitials = (fullName = '') =>
+  fullName
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase())
+    .map((word) => word[0]?.toUpperCase())
     .join('') || 'U';
 
 const Topbar = () => {
@@ -50,40 +54,41 @@ const Topbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { enqueueSnackbar } = useSnackbar();
-  const user = useSelector((s) => s.auth.user);
-  const isAuthenticated = useSelector((s) => s.auth.isAuthenticated);
+  const operator = useSelector((state) => state.auth.user);
+  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
   const customer = useSelector(selectCustomer);
   const hasCustomer = useSelector(selectHasCustomer);
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [query, setQuery] = useState('');
+  const [menuAnchor, setMenuAnchor] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
 
   if (!isAuthenticated) return null;
 
-  const open = Boolean(anchorEl);
-  const handleOpen = (e) => setAnchorEl(e.currentTarget);
-  const handleClose = () => setAnchorEl(null);
+  const menuOpen = Boolean(menuAnchor);
+  const openMenu = (event) => setMenuAnchor(event.currentTarget);
+  const closeMenu = () => setMenuAnchor(null);
 
-  const currentRoles = user?.roles || [];
-  const rolesLabel = currentRoles.length ? currentRoles.join(', ') : '(sin roles)';
+  const operatorRoles = operator?.roles || [];
+  const rolesLabel = operatorRoles.length ? operatorRoles.join(', ') : '(sin roles)';
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    const key = query.trim();
-    if (!key || searching) return;
+  const handleSearch = async (event) => {
+    event.preventDefault();
+    const searchKey = searchQuery.trim();
+    if (!searchKey || searching) return;
     setSearching(true);
     try {
-      const data = await userService.searchByEmail(key);
-      if (!data) {
+      const customerData = await userService.searchByEmail(searchKey);
+      if (!customerData) {
         enqueueSnackbar('Usuario no encontrado', { variant: 'warning' });
         return;
       }
-      dispatch(setCustomer(data));
-      const name = data.evUser?.display_name || data.evUser?.email_address || 'usuario';
-      enqueueSnackbar(`Usuario cargado: ${name}`, { variant: 'success' });
-      setQuery('');
-      if (!CUSTOMER_SCOPED_PATHS.includes(location.pathname)) {
-        navigate('/data');
+      dispatch(setCustomer(customerData));
+      const displayName =
+        customerData.evUser?.display_name || customerData.evUser?.email_address || 'usuario';
+      enqueueSnackbar(`Usuario cargado: ${displayName}`, { variant: 'success' });
+      setSearchQuery('');
+      if (!isCustomerScoped(location.pathname)) {
+        navigate('/datos');
       }
     } finally {
       setSearching(false);
@@ -92,18 +97,18 @@ const Topbar = () => {
 
   const handleClearCustomer = () => {
     dispatch(clearCustomer());
-    if (CUSTOMER_SCOPED_PATHS.includes(location.pathname)) {
+    if (isCustomerScoped(location.pathname)) {
       navigate('/');
     }
   };
 
   const handlePickRoles = (roles) => {
     dispatch(setRoles(roles));
-    handleClose();
+    closeMenu();
   };
 
   const handleLogout = () => {
-    handleClose();
+    closeMenu();
     dispatch(logout());
   };
 
@@ -121,8 +126,8 @@ const Topbar = () => {
       <Toolbar sx={{ gap: 2 }}>
         <Box component="form" onSubmit={handleSearch} sx={{ flexGrow: 1, maxWidth: 520 }}>
           <TextField
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
             placeholder="Buscar usuario por uid, email, username o id de cliente…"
             size="small"
             fullWidth
@@ -144,7 +149,7 @@ const Topbar = () => {
                   fontWeight: 600,
                 }}
               >
-                {initials(customer.displayName || customer.email || '')}
+                {getInitials(customer.displayName || customer.email || '')}
               </Avatar>
             }
             label={customer.displayName || customer.email}
@@ -156,31 +161,26 @@ const Topbar = () => {
 
         <Box sx={{ textAlign: 'right', display: { xs: 'none', sm: 'block' } }}>
           <Typography variant="body2" sx={{ lineHeight: 1.2 }}>
-            {user?.name || user?.email || 'Usuario'}
+            {operator?.name || operator?.email || 'Usuario'}
           </Typography>
           <Typography variant="caption" color="text.secondary">
             {rolesLabel}
           </Typography>
         </Box>
-        <IconButton
-          aria-label="Cuenta"
-          onClick={handleOpen}
-          size="large"
-          sx={{ color: 'primary.main' }}
-        >
+        <IconButton aria-label="Cuenta" onClick={openMenu} size="large" sx={{ color: 'primary.main' }}>
           <AccountCircle fontSize="large" />
         </IconButton>
         <Menu
-          anchorEl={anchorEl}
-          open={open}
-          onClose={handleClose}
+          anchorEl={menuAnchor}
+          open={menuOpen}
+          onClose={closeMenu}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
           transformOrigin={{ vertical: 'top', horizontal: 'right' }}
           slotProps={{ sx: { minWidth: 260 } }}
         >
           <ListSubheader sx={{ bgcolor: 'transparent', lineHeight: 1.4, py: 1 }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-              {user?.name || user?.email || 'Usuario'}
+              {operator?.name || operator?.email || 'Usuario'}
             </Typography>
             <Typography variant="caption" color="text.secondary">
               Roles: {rolesLabel}
@@ -194,19 +194,19 @@ const Topbar = () => {
             </ListSubheader>
           )}
           {IS_DEV &&
-            PREDEFINED_ROLE_SETS.map((set) => {
-              const selected = rolesEqual(set.roles, currentRoles);
+            PREDEFINED_ROLE_SETS.map((roleSet) => {
+              const selected = sameRoles(roleSet.roles, operatorRoles);
               return (
                 <MenuItem
-                  key={set.label}
-                  onClick={() => handlePickRoles(set.roles)}
+                  key={roleSet.label}
+                  onClick={() => handlePickRoles(roleSet.roles)}
                   selected={selected}
                   dense
                 >
                   <ListItemIcon sx={{ minWidth: 28 }}>
                     {selected && <CheckIcon fontSize="small" color="primary" />}
                   </ListItemIcon>
-                  {set.label}
+                  {roleSet.label}
                 </MenuItem>
               );
             })}

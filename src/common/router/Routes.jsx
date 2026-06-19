@@ -2,16 +2,27 @@ import { useEffect, useRef } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { useSnackbar } from 'notistack';
-import { Role } from '@/common/roles/role';
+import { Priv } from '@/common/permissions/privileges';
 import AuthenticatedRoute from '@/common/router/AuthenticatedRoute';
 import UnauthenticatedRoute from '@/common/router/UnauthenticatedRoute';
 import { selectHasCustomer } from '@/common/features/customer/customerSlice';
 import Login from '@/views/auth/login';
 import Home from '@/views/home';
-import Data from '@/views/data';
-import Subscriptions from '@/views/subscriptions';
-import Invoices from '@/views/invoices';
 import NotFound from '@/views/notFound';
+import Datos from '@/views/datos';
+import SuscDigitales from '@/views/suscripciones/digitales';
+import SuscInvitaciones from '@/views/suscripciones/invitaciones';
+import SuscTienda from '@/views/suscripciones/tienda';
+import SuscAccesos from '@/views/suscripciones/accesos';
+import SuscCrear from '@/views/suscripciones/crear';
+import Notificaciones from '@/views/notificaciones';
+import Facturacion from '@/views/facturacion';
+import HtCrearUsuario from '@/views/herramientas/crear-usuario';
+import HtNifMasivo from '@/views/herramientas/nif-masivo';
+import HtRolesMasivo from '@/views/herramientas/roles-masivo';
+import HtLandings from '@/views/herramientas/landings';
+import HtRetencion from '@/views/herramientas/retencion';
+import HtBuscarExternalId from '@/views/herramientas/buscar-externalid';
 
 const RequireCustomer = ({ children }) => {
   const hasCustomer = useSelector(selectHasCustomer);
@@ -26,6 +37,18 @@ const RequireCustomer = ({ children }) => {
   if (!hasCustomer) return <Navigate to="/" replace />;
   return children;
 };
+
+// Customer-scoped page: auth + READ privilege + a loaded customer.
+const Scoped = ({ priv, children }) => (
+  <AuthenticatedRoute requiredPrivilege={priv}>
+    <RequireCustomer>{children}</RequireCustomer>
+  </AuthenticatedRoute>
+);
+
+// Global tool page: auth + READ privilege, no customer needed.
+const Global = ({ priv, children }) => (
+  <AuthenticatedRoute requiredPrivilege={priv}>{children}</AuthenticatedRoute>
+);
 
 const AppRoutes = () => (
   <Routes>
@@ -45,58 +68,33 @@ const AppRoutes = () => (
         </AuthenticatedRoute>
       }
     />
+
+    <Route path="/datos" element={<Scoped priv={Priv.READ_DATOS}><Datos /></Scoped>} />
+
     <Route
-      path="/data"
-      element={
-        <AuthenticatedRoute
-          allowedRoles={[
-            Role.Viewer,
-            Role.FinanceViewer,
-            Role.FinanceEditor,
-            Role.Manager,
-            Role.Admin,
-          ]}
-        >
-          <RequireCustomer>
-            <Data />
-          </RequireCustomer>
-        </AuthenticatedRoute>
-      }
+      path="/suscripciones"
+      element={<Navigate to="/suscripciones/digitales" replace />}
     />
+    <Route path="/suscripciones/digitales" element={<Scoped priv={Priv.READ_SUSCRIPCIONES}><SuscDigitales /></Scoped>} />
+    <Route path="/suscripciones/invitaciones" element={<Scoped priv={Priv.READ_SUSCRIPCIONES}><SuscInvitaciones /></Scoped>} />
+    <Route path="/suscripciones/tienda" element={<Scoped priv={Priv.READ_SUSCRIPCIONES}><SuscTienda /></Scoped>} />
+    <Route path="/suscripciones/accesos" element={<Scoped priv={Priv.READ_SUSCRIPCIONES}><SuscAccesos /></Scoped>} />
+    <Route path="/suscripciones/crear" element={<Scoped priv={Priv.READ_SUSCRIPCIONES}><SuscCrear /></Scoped>} />
+
+    <Route path="/notificaciones" element={<Scoped priv={Priv.READ_NOTIFICACIONES}><Notificaciones /></Scoped>} />
+    <Route path="/facturacion" element={<Scoped priv={Priv.READ_FACTURACION}><Facturacion /></Scoped>} />
+
     <Route
-      path="/subscriptions"
-      element={
-        <AuthenticatedRoute
-          allowedRoles={[
-            Role.FinanceViewer,
-            Role.FinanceEditor,
-            Role.Manager,
-            Role.Admin,
-          ]}
-        >
-          <RequireCustomer>
-            <Subscriptions />
-          </RequireCustomer>
-        </AuthenticatedRoute>
-      }
+      path="/herramientas"
+      element={<Navigate to="/herramientas/crear-usuario" replace />}
     />
-    <Route
-      path="/invoices"
-      element={
-        <AuthenticatedRoute
-          allowedRoles={[
-            Role.FinanceViewer,
-            Role.FinanceEditor,
-            Role.Manager,
-            Role.Admin,
-          ]}
-        >
-          <RequireCustomer>
-            <Invoices />
-          </RequireCustomer>
-        </AuthenticatedRoute>
-      }
-    />
+    <Route path="/herramientas/crear-usuario" element={<Global priv={Priv.READ_HERRAMIENTAS}><HtCrearUsuario /></Global>} />
+    <Route path="/herramientas/nif-masivo" element={<Global priv={Priv.READ_HERRAMIENTAS}><HtNifMasivo /></Global>} />
+    <Route path="/herramientas/roles-masivo" element={<Global priv={Priv.READ_HERRAMIENTAS}><HtRolesMasivo /></Global>} />
+    <Route path="/herramientas/landings" element={<Global priv={Priv.READ_HERRAMIENTAS}><HtLandings /></Global>} />
+    <Route path="/herramientas/retencion" element={<Global priv={Priv.READ_HERRAMIENTAS}><HtRetencion /></Global>} />
+    <Route path="/herramientas/buscar-externalid" element={<Global priv={Priv.READ_HERRAMIENTAS}><HtBuscarExternalId /></Global>} />
+
     <Route path="*" element={<NotFound />} />
   </Routes>
 );

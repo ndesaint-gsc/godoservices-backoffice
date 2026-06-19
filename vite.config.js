@@ -24,6 +24,11 @@ export default defineConfig(({ mode }) => {
           secure: false,
           configure: (proxy) => {
             proxy.on('proxyReq', (proxyReq, req) => {
+              // Strip browser CORS headers: this is now a server-to-server call,
+              // so the backend must not see Origin/Referer (Spring rejects
+              // non-GET cross-origin requests with "Invalid CORS request").
+              proxyReq.removeHeader('origin');
+              proxyReq.removeHeader('referer');
               if (!sessionId) return;
               const url = new URL(req.url, target);
               if (!url.searchParams.has('sessionId')) {

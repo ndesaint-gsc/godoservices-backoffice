@@ -3,29 +3,28 @@ import { useSelector } from 'react-redux';
 import { CircularProgress } from '@mui/material';
 import { useSnackbar } from 'notistack';
 import { useEffect, useRef } from 'react';
-import { useHasRoles } from '@/common/roles/useHasRoles';
+import { useHasPrivilege } from '@/common/permissions/useHasPrivilege';
 import { getLandingRoute } from '@/common/router/getLandingRoute';
 import { selectHasCustomer } from '@/common/features/customer/customerSlice';
 
-const AuthenticatedRoute = ({ children, allowedRoles }) => {
+const AuthenticatedRoute = ({ children, requiredPrivilege }) => {
   const location = useLocation();
   const { enqueueSnackbar } = useSnackbar();
-  const { isAuthenticated, isLoading, user } = useSelector((s) => s.auth);
+  const { isAuthenticated, isLoading, user } = useSelector((state) => state.auth);
   const hasCustomer = useSelector(selectHasCustomer);
-  const allowed = useHasRoles(allowedRoles);
+  const allowed = useHasPrivilege(requiredPrivilege);
   const notifiedRef = useRef(false);
 
-  const shouldDenyByRole =
-    isAuthenticated && allowedRoles && allowedRoles.length > 0 && !allowed;
+  const shouldDeny = isAuthenticated && requiredPrivilege && !allowed;
 
   useEffect(() => {
-    if (shouldDenyByRole && !notifiedRef.current) {
+    if (shouldDeny && !notifiedRef.current) {
       notifiedRef.current = true;
       enqueueSnackbar('No tienes permisos para acceder a esta vista', {
         variant: 'error',
       });
     }
-  }, [shouldDenyByRole, enqueueSnackbar]);
+  }, [shouldDeny, enqueueSnackbar]);
 
   if (isLoading) return <CircularProgress />;
 
@@ -33,7 +32,7 @@ const AuthenticatedRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (shouldDenyByRole) {
+  if (shouldDeny) {
     return <Navigate to={getLandingRoute(user?.roles, hasCustomer)} replace />;
   }
 

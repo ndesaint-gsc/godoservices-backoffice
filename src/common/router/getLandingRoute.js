@@ -1,18 +1,10 @@
-import { Role } from '@/common/roles/role';
+import { hasPrivilege, Priv } from '@/common/permissions/privileges';
 
-const DATA_ALLOWED_ROLES = [
-  Role.Viewer,
-  Role.FinanceViewer,
-  Role.FinanceEditor,
-  Role.Manager,
-  Role.Admin,
-];
-
-// If a customer is loaded AND the operator has the role to see /data, land there.
-// Otherwise land on / (the empty-state home that prompts for a search).
+// After login no customer is loaded yet -> land on / (empty state prompting a search).
+// Once a customer is loaded and the operator can read Datos, /datos is the natural home.
 export const getLandingRoute = (userRoles = [], hasCustomer = false) => {
-  if (hasCustomer && userRoles.some((r) => DATA_ALLOWED_ROLES.includes(r))) {
-    return '/data';
+  if (hasCustomer && hasPrivilege(userRoles, Priv.READ_DATOS)) {
+    return '/datos';
   }
   return '/';
 };

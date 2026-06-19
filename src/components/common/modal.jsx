@@ -10,8 +10,7 @@ import {
 import { ModalContext } from '@/common/providers/ModalProvider';
 
 const Modal = () => {
-  const ctx = useContext(ModalContext);
-  const { modal, remove } = ctx;
+  const { modal, remove } = useContext(ModalContext);
 
   if (!modal || !modal.open) return null;
 

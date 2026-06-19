@@ -1,7 +1,9 @@
-import { NavLink } from 'react-router-dom';
+import { useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import {
   Box,
+  Collapse,
   Drawer,
   List,
   ListItem,
@@ -12,21 +14,21 @@ import {
   Typography,
 } from '@mui/material';
 import Home from '@mui/icons-material/Home';
-import People from '@mui/icons-material/People';
+import Person from '@mui/icons-material/Person';
 import Subscriptions from '@mui/icons-material/Subscriptions';
+import Notifications from '@mui/icons-material/Notifications';
 import Receipt from '@mui/icons-material/Receipt';
+import Build from '@mui/icons-material/Build';
+import ExpandLess from '@mui/icons-material/ExpandLess';
+import ExpandMore from '@mui/icons-material/ExpandMore';
 import { NAV_ITEMS } from '@/common/router/nav.config';
-import { useHasRoles } from '@/common/roles/useHasRoles';
+import { useHasPrivilege } from '@/common/permissions/useHasPrivilege';
 import { selectHasCustomer } from '@/common/features/customer/customerSlice';
+import { useBrandConfig } from '@/common/theme/useBrand';
 
 const DRAWER_WIDTH = 240;
 
-const ICONS = {
-  Home,
-  People,
-  Subscriptions,
-  Receipt,
-};
+const ICONS = { Home, Person, Subscriptions, Notifications, Receipt, Build };
 
 const itemSx = {
   mx: 1.25,
@@ -48,12 +50,8 @@ const itemSx = {
   '&.active': {
     backgroundColor: 'action.selected',
     color: 'text.primary',
-    '& .MuiListItemIcon-root': {
-      color: 'secondary.main',
-    },
-    '& .MuiListItemText-primary': {
-      fontWeight: 600,
-    },
+    '& .MuiListItemIcon-root': { color: 'secondary.main' },
+    '& .MuiListItemText-primary': { fontWeight: 600 },
     '&::before': {
       content: '""',
       position: 'absolute',
@@ -62,20 +60,43 @@ const itemSx = {
       bottom: 8,
       width: 3,
       borderRadius: 2,
-      backgroundColor: 'secondary.main',
+      backgroundColor: 'brandDetail.main',
     },
   },
 };
 
-const NavListItem = ({ item }) => {
+const childSx = {
+  ...itemSx,
+  pl: 4.5,
+  ml: 1.25,
+};
+
+// A leaf navigation link.
+const NavLeaf = ({ to, label, icon, sx }) => {
+  const Icon = icon ? ICONS[icon] : null;
+  return (
+    <ListItem disablePadding>
+      <ListItemButton component={NavLink} to={to} end sx={sx || itemSx}>
+        {Icon && (
+          <ListItemIcon>
+            <Icon />
+          </ListItemIcon>
+        )}
+        <ListItemText primary={label} />
+      </ListItemButton>
+    </ListItem>
+  );
+};
+
+// An expandable group with children. Disabled (dimmed) when it requires a customer
+// and none is loaded.
+const NavGroup = ({ item, locked }) => {
+  const location = useLocation();
   const Icon = ICONS[item.icon];
-  const visible = useHasRoles(item.allowedRoles);
-  const hasCustomer = useSelector(selectHasCustomer);
-  if (!visible) return null;
+  const hasActiveChild = item.children.some((child) => location.pathname.startsWith(child.path));
+  const [open, setOpen] = useState(hasActiveChild);
 
-  const disabled = item.requiresCustomer && !hasCustomer;
-
-  if (disabled) {
+  if (locked) {
     return (
       <ListItem disablePadding>
         <ListItemButton disabled sx={itemSx}>
@@ -91,21 +112,63 @@ const NavListItem = ({ item }) => {
   }
 
   return (
-    <ListItem disablePadding>
-      <ListItemButton component={NavLink} to={item.path} end sx={itemSx}>
-        {Icon && (
-          <ListItemIcon>
-            <Icon />
-          </ListItemIcon>
-        )}
-        <ListItemText primary={item.label} />
-      </ListItemButton>
-    </ListItem>
+    <>
+      <ListItem disablePadding>
+        <ListItemButton onClick={() => setOpen((isOpen) => !isOpen)} sx={itemSx}>
+          {Icon && (
+            <ListItemIcon>
+              <Icon />
+            </ListItemIcon>
+          )}
+          <ListItemText primary={item.label} />
+          {open ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
+        </ListItemButton>
+      </ListItem>
+      <Collapse in={open} timeout="auto" unmountOnExit>
+        <List disablePadding>
+          {item.children.map((child) => (
+            <NavLeaf key={child.path} to={child.path} label={child.label} sx={childSx} />
+          ))}
+        </List>
+      </Collapse>
+    </>
   );
+};
+
+// One nav entry: resolves privilege + customer gating, then renders leaf or group.
+const NavEntry = ({ item }) => {
+  const visible = useHasPrivilege(item.privilege);
+  const hasCustomer = useSelector(selectHasCustomer);
+
+  // Items without a privilege (e.g. Inicio) are always visible.
+  if (item.privilege && !visible) return null;
+
+  const locked = item.requiresCustomer && !hasCustomer;
+
+  if (item.children) return <NavGroup item={item} locked={locked} />;
+
+  if (locked) {
+    const Icon = ICONS[item.icon];
+    return (
+      <ListItem disablePadding>
+        <ListItemButton disabled sx={itemSx}>
+          {Icon && (
+            <ListItemIcon>
+              <Icon />
+            </ListItemIcon>
+          )}
+          <ListItemText primary={item.label} />
+        </ListItemButton>
+      </ListItem>
+    );
+  }
+
+  return <NavLeaf to={item.path} label={item.label} icon={item.icon} />;
 };
 
 const Nav = () => {
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+  const brand = useBrandConfig();
   if (!isAuthenticated) return null;
 
   return (
@@ -123,22 +186,35 @@ const Nav = () => {
         },
       }}
     >
-      <Toolbar sx={{ px: 2.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+      <Toolbar
+        sx={{
+          px: 2.5,
+          py: 1.25,
+          flexDirection: 'column',
+          alignItems: 'flex-start',
+          justifyContent: 'center',
+          gap: 0.5,
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+        }}
+      >
         <Typography
-          variant="h5"
-          noWrap
+          variant="overline"
           component="div"
-          sx={{ fontWeight: 700, color: 'text.primary', letterSpacing: '-0.02em' }}
+          sx={{ color: 'text.disabled', lineHeight: 1.2 }}
         >
           Backoffice
-          <Box component="span" sx={{ color: 'secondary.main', ml: 0.75 }}>
-            Godó
-          </Box>
         </Typography>
+        <Box
+          component="img"
+          src={brand.logo}
+          alt={brand.label}
+          sx={{ display: 'block', height: brand.logoHeight, width: 'auto' }}
+        />
       </Toolbar>
       <List sx={{ flexGrow: 1, py: 1 }}>
         {NAV_ITEMS.map((item) => (
-          <NavListItem key={item.path} item={item} />
+          <NavEntry key={item.path || item.label} item={item} />
         ))}
       </List>
     </Drawer>
