@@ -3,13 +3,13 @@ import { apiUrl } from '@/services/endpoints';
 
 const toQueryString = (params) => '?' + new URLSearchParams(params).toString();
 
-// POST /perfil/user/evbk/revokeRole?role=<role>  body: evUser
+// POST /perfil/console/user/revokeRole?role=<role>  body: evUser
 const revokeRole = (role, evUser) =>
-  http.post(apiUrl('/perfil/user/evbk/revokeRole' + toQueryString({ role })), evUser);
+  http.post(apiUrl('/perfil/console/user/revokeRole' + toQueryString({ role })), evUser);
 
-// POST /perfil/user/evbk/createRole?role=<role>&date=<ISO end date>  body: evUser
+// POST /perfil/console/user/createRole?role=<role>&date=<ISO end date>  body: evUser
 const createRole = (role, date, evUser) =>
-  http.post(apiUrl('/perfil/user/evbk/createRole' + toQueryString({ role, date })), evUser);
+  http.post(apiUrl('/perfil/console/user/createRole' + toQueryString({ role, date })), evUser);
 
 const subscriptionsService = { revokeRole, createRole };
 

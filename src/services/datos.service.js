@@ -3,26 +3,27 @@ import { apiUrl } from '@/services/endpoints';
 
 const toQueryString = (params) => '?' + new URLSearchParams(params).toString();
 
-// PUT /perfil/user/evbk/update?guid=<guid>
+// PUT /perfil/console/user/{guid}
 // Body is { attributes: [{name, value}] } (matches the legacy manager payload).
 const updateUser = (guid, attributes) =>
-  http.put(apiUrl('/perfil/user/evbk/update' + toQueryString({ guid })), { attributes });
+  http.put(apiUrl('/perfil/console/user/' + guid), { attributes });
 
-// Credential actions. reset/verify/delete take the full evUser object as body.
+// Credential actions. reset/verify take the full evUser object as body.
 const resetPassword = (evUser) =>
-  http.post(apiUrl('/perfil/user/evbk/resetPassword'), evUser);
+  http.post(apiUrl('/perfil/console/user/resetPassword'), evUser);
 
 const sendVerification = (evUser) =>
-  http.post(apiUrl('/perfil/user/evbk/sendVerificationPassword'), evUser);
+  http.post(apiUrl('/perfil/console/user/sendVerificationPassword'), evUser);
 
+// DELETE /perfil/console/user/{guid} — the server reloads the user from the guid.
 const deleteUser = (evUser) =>
-  http.post(apiUrl('/perfil/user/evbk/deleteUser'), evUser);
+  http.del(apiUrl('/perfil/console/user/' + evUser.guid));
 
 const invalidateCache = (guid) =>
-  http.post(apiUrl('/perfil/user/evbk/invalidate-cache' + toQueryString({ guid })));
+  http.post(apiUrl('/perfil/console/user/invalidate-cache' + toQueryString({ guid })));
 
 const unblockUser = (guid) =>
-  http.post(apiUrl('/perfil/user/evbk/unblock-user' + toQueryString({ guid })));
+  http.post(apiUrl('/perfil/console/user/unblock-user' + toQueryString({ guid })));
 
 const datosService = {
   updateUser,

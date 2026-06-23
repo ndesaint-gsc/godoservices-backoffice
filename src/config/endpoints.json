@@ -1,6 +1,6 @@
 {
   "USERS":         "/users",
-  "USER_INFO":     "/perfil/user/evbk/info",
+  "USER_INFO":     "/perfil/console/user/info",
   "SUBSCRIPTIONS": "/subscriptions",
   "INVOICES":      "/invoices",
   "AUTH_LOGIN":    "/auth/login",

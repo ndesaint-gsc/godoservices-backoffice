@@ -1,7 +1,7 @@
 import { endpoint } from '@/services/endpoints';
 import { http } from '@/services/http';
 
-// Calls /perfil/user/evbk/info?key=<email|uid|username|fidelityCardId>.
+// Calls /perfil/console/user/info?key=<email|uid|username|fidelityCardId>.
 const searchByEmail = async (key) => {
   if (!key) return null;
   const trimmed = String(key).trim();
