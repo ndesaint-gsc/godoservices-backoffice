@@ -34,6 +34,16 @@ const rectify = (transactionId, guid) =>
 const negative = (transactionId, guid) =>
   http.post(apiUrl('/perfil/console/invoices/' + transactionId + '/negative' + toQueryString({ guid })));
 
+// Recalculate invoice. Load the editable line data, then save the edited lines.
+// GET returns { recalculateInvoiceList, invoiceId, price, totalTax, grossAmount,
+// startDate, endDate, transactionType }. POST body is the RecalculateInvoice[]
+// (the edited lines).
+const getRecalculateData = (transactionId) =>
+  http.get(apiUrl('/perfil/console/invoices/' + transactionId + '/recalculate-data'));
+
+const recalculateInvoice = (transactionId, lines) =>
+  http.post(apiUrl('/perfil/console/user/recalculate-invoice/' + transactionId), lines);
+
 // Fiscal address — same endpoint the live backoffice uses. The backend writes
 // EVERY fiscal attribute on each call (omitted fields are blanked), and reads
 // the guid from the body, so always POST the FULL field set including guid.
@@ -52,6 +62,8 @@ const billingService = {
   substitute,
   rectify,
   negative,
+  getRecalculateData,
+  recalculateInvoice,
   updateFiscalAddress,
   deleteFiscalAddress,
 };

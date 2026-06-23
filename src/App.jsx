@@ -8,6 +8,7 @@ import Topbar from '@/components/common/topbar';
 import Main from '@/components/common/main';
 import Modal from '@/components/common/modal';
 import { selectCustomer, setCustomer } from '@/common/features/customer/customerSlice';
+import { loadPermissions } from '@/common/features/auth/authSlice';
 import userService from '@/services/user.service';
 
 function App() {
@@ -18,6 +19,12 @@ function App() {
   // The customer is persisted (reload keeps it + renders instantly from the store),
   // but a persisted snapshot can be stale vs the backend. On load, refresh it from
   // /info so the store reflects live data. Pages only ever read the store.
+  // Rol + permisos del operador desde el backend (registry por app). Al montar si ya estaba
+  // autenticado y cuando isAuthenticated pasa a true tras el login.
+  useEffect(() => {
+    if (isAuthenticated) dispatch(loadPermissions());
+  }, [isAuthenticated, dispatch]);
+
   useEffect(() => {
     if (isAuthenticated && persistedGuid) {
       userService.searchByEmail(persistedGuid).then((fresh) => {

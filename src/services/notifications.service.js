@@ -6,6 +6,12 @@ import { apiUrl } from '@/services/endpoints';
 const updateAttributes = (guid, attributes) =>
   http.put(apiUrl('/perfil/console/user/' + guid), { attributes });
 
-const notificationsService = { updateAttributes };
+// Catálogos disponibles (EvolokConfig), por tenant: { LV: Catalog[], MD: [...], R1: [...] }.
+// Catalog = { id, name, image, category, isUrlExternal }.
+const getNewslettersCatalog = () => http.get(apiUrl('/perfil/console/user/newsletters'));
+
+const getInterestsCatalog = () => http.get(apiUrl('/perfil/console/user/interests'));
+
+const notificationsService = { updateAttributes, getNewslettersCatalog, getInterestsCatalog };
 
 export default notificationsService;

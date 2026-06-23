@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import { useSnackbar } from 'notistack';
 import { useHasPrivilege } from '@/common/permissions/useHasPrivilege';
+import { useActionAllowed } from '@/common/permissions/permissions';
 import { Priv } from '@/common/permissions/privileges';
 import { ModalContext } from '@/common/providers/ModalProvider';
 import toolsService from '@/services/tools.service';
@@ -37,7 +38,11 @@ const readErrorMessage = (error) => {
 const CrearUsuario = () => {
   const { enqueueSnackbar } = useSnackbar();
   const modal = useContext(ModalContext);
-  const canEdit = useHasPrivilege(Priv.EDIT_HERRAMIENTAS);
+  // Edición combinada con el gating por ACCIÓN (default-deny). Ambos hooks se llaman
+  // siempre (no en cortocircuito) para no romper el orden de hooks de React.
+  const hasEditPriv = useHasPrivilege(Priv.EDIT_HERRAMIENTAS);
+  const canCreateUser = useActionAllowed('herramientas.createUser');
+  const canEdit = hasEditPriv && canCreateUser;
 
   const [email, setEmail] = useState('');
   const [brand, setBrand] = useState('LV');

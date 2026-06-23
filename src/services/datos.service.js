@@ -25,6 +25,14 @@ const invalidateCache = (guid) =>
 const unblockUser = (guid) =>
   http.post(apiUrl('/perfil/console/user/unblock-user' + toQueryString({ guid })));
 
+// NIF/NIE linking. Vincular: PUT with the nif as a query param.
+// Desvincular: DELETE (the server clears the linked nif).
+const linkNif = (guid, nif) =>
+  http.put(apiUrl('/perfil/console/user/' + guid + '/nif' + toQueryString({ nif })));
+
+const unlinkNif = (guid) =>
+  http.del(apiUrl('/perfil/console/user/' + guid + '/nif'));
+
 const datosService = {
   updateUser,
   resetPassword,
@@ -32,6 +40,8 @@ const datosService = {
   deleteUser,
   invalidateCache,
   unblockUser,
+  linkNif,
+  unlinkNif,
 };
 
 export default datosService;

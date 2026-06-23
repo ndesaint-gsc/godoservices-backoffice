@@ -4,8 +4,10 @@ import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { BrowserRouter } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
-import { SnackbarProvider } from 'notistack';
+import { SnackbarProvider, closeSnackbar } from 'notistack';
 import CssBaseline from '@mui/material/CssBaseline';
+import IconButton from '@mui/material/IconButton';
+import CloseIcon from '@mui/icons-material/Close';
 
 import App from '@/App';
 import store, { persistor } from '@/common/store/store';
@@ -21,7 +23,20 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <BrandThemeProvider>
         <CssBaseline />
         <ModalProvider>
-          <SnackbarProvider maxSnack={3} hideIconVariant>
+          <SnackbarProvider
+            maxSnack={3}
+            hideIconVariant
+            action={(snackbarId) => (
+              <IconButton
+                size="small"
+                color="inherit"
+                aria-label="cerrar"
+                onClick={() => closeSnackbar(snackbarId)}
+              >
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            )}
+          >
             <BrowserRouter>
               <HelmetProvider>
                 <BrandTitle />

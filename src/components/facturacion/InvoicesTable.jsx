@@ -35,7 +35,10 @@ const StateChip = ({ state }) => {
 
 // `handlers` is the action callback bag (see invoiceActions.buildInvoiceActions).
 // `canEdit` disables every action except download for read-only operators.
-const InvoicesTable = ({ invoices, loading, canEdit, runningAction, handlers }) => {
+// `actionAllowed` maps each gated action's `perm` key (facturacion.substitute /
+// rectify / negative / recalculate) to whether `useActionAllowed` permits it, so
+// each menu item is disabled visually when its permission is denied.
+const InvoicesTable = ({ invoices, loading, canEdit, runningAction, handlers, actionAllowed = {} }) => {
   const [actionMenu, setActionMenu] = useState({ anchor: null, invoice: null });
   const openActionMenu = (event, invoice) => setActionMenu({ anchor: event.currentTarget, invoice });
   const closeActionMenu = () => setActionMenu({ anchor: null, invoice: null });
@@ -111,7 +114,10 @@ const InvoicesTable = ({ invoices, loading, canEdit, runningAction, handlers }) 
           buildInvoiceActions(actionMenu.invoice, handlers).map((action) => (
             <MenuItem
               key={action.key}
-              disabled={!canEdit && action.key !== 'download'}
+              disabled={
+                (!canEdit && action.key !== 'download') ||
+                (action.perm ? !actionAllowed[action.perm] : false)
+              }
               onClick={() => {
                 closeActionMenu();
                 action.onClick();
