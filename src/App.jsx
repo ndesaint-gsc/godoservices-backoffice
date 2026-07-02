@@ -9,12 +9,18 @@ import Main from '@/components/common/main';
 import Modal from '@/components/common/modal';
 import { selectCustomer, setCustomer } from '@/common/features/customer/customerSlice';
 import { loadPermissions } from '@/common/features/auth/authSlice';
+import { selectPermissions, selectRole } from '@/common/permissions/permissions';
+import { ConsoleProvider } from '@/console-sdk/react';
 import userService from '@/services/user.service';
 
 function App() {
   const dispatch = useDispatch();
   const isAuthenticated = useSelector((s) => s.auth.isAuthenticated);
   const persistedGuid = useSelector(selectCustomer)?.guid;
+  // Snapshot de permisos para el console-sdk (los hooks useTabVisible/… lo leen del provider).
+  const permissions = useSelector(selectPermissions);
+  const role = useSelector(selectRole);
+  const roles = useSelector((s) => s.auth.user?.roles) || (role ? [role] : []);
 
   // The customer is persisted (reload keeps it + renders instantly from the store),
   // but a persisted snapshot can be stale vs the backend. On load, refresh it from
@@ -36,16 +42,18 @@ function App() {
   }, []);
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      <Nav />
-      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <Topbar />
-        <Main>
-          <Routes />
-        </Main>
+    <ConsoleProvider value={{ permissions, role, roles }}>
+      <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+        <Nav />
+        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+          <Topbar />
+          <Main>
+            <Routes />
+          </Main>
+        </Box>
+        <Modal />
       </Box>
-      <Modal />
-    </Box>
+    </ConsoleProvider>
   );
 }
 

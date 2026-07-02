@@ -79,9 +79,11 @@ const authSlice = createSlice({
       .addCase(loadPermissions.fulfilled, (state, action) => {
         state.role = action.payload?.role ?? null;
         state.permissions = action.payload?.permissions ?? null;
-        // Refleja el rol del backend en user.roles para el shim useHasPrivilege y el display.
-        if (state.user && action.payload?.role) {
-          state.user.roles = [action.payload.role];
+        // Refleja los roles del backend en user.roles para el shim useHasPrivilege y el display.
+        // `me` devuelve roles[] (multi-rol Evolok); fallback al rol único si no viene.
+        const roles = action.payload?.roles ?? (action.payload?.role ? [action.payload.role] : []);
+        if (state.user) {
+          state.user.roles = roles;
         }
       })
       .addCase(logout.fulfilled, (state) => {

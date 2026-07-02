@@ -1,29 +1,3 @@
-export const Priv = {
-  READ_DATOS: 'READ_DATOS',
-  EDIT_DATOS: 'EDIT_DATOS',
-  READ_SUSCRIPCIONES: 'READ_SUSCRIPCIONES',
-  EDIT_SUSCRIPCIONES: 'EDIT_SUSCRIPCIONES',
-  READ_NOTIFICACIONES: 'READ_NOTIFICACIONES',
-  EDIT_NOTIFICACIONES: 'EDIT_NOTIFICACIONES',
-  READ_FACTURACION: 'READ_FACTURACION',
-  EDIT_FACTURACION: 'EDIT_FACTURACION',
-  READ_HERRAMIENTAS: 'READ_HERRAMIENTAS',
-  EDIT_HERRAMIENTAS: 'EDIT_HERRAMIENTAS',
-};
-
-// privilege -> roles that grant it. Tune here as roles evolve.
-const PRIVILEGE_ROLES = {
-  [Priv.READ_DATOS]: ['VIEWER', 'FINANCE_VIEWER', 'FINANCE_EDITOR', 'MANAGER', 'ADMIN'],
-  [Priv.EDIT_DATOS]: ['MANAGER', 'ADMIN'],
-  [Priv.READ_SUSCRIPCIONES]: ['VIEWER', 'MANAGER', 'ADMIN'],
-  [Priv.EDIT_SUSCRIPCIONES]: ['MANAGER', 'ADMIN'],
-  [Priv.READ_NOTIFICACIONES]: ['VIEWER', 'MANAGER', 'ADMIN'],
-  [Priv.EDIT_NOTIFICACIONES]: ['MANAGER', 'ADMIN'],
-  [Priv.READ_FACTURACION]: ['VIEWER', 'FINANCE_VIEWER', 'FINANCE_EDITOR', 'MANAGER', 'ADMIN'],
-  [Priv.EDIT_FACTURACION]: ['FINANCE_EDITOR', 'MANAGER', 'ADMIN'],
-  [Priv.READ_HERRAMIENTAS]: ['MANAGER', 'ADMIN'],
-  [Priv.EDIT_HERRAMIENTAS]: ['ADMIN'],
-};
-
-export const hasPrivilege = (userRoles, priv) =>
-  (userRoles || []).some((r) => PRIVILEGE_ROLES[priv]?.includes(r));
+// Modelo legacy de privilegios (routing/nav). Se centraliza en el console-sdk; aquí solo se reexporta
+// por compatibilidad con los imports existentes. Ver console-sdk/keys.js.
+export { Priv, hasPrivilege } from '@/console-sdk/keys';
