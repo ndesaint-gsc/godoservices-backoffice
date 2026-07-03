@@ -25,7 +25,7 @@ import Check from '@mui/icons-material/Check';
 import Close from '@mui/icons-material/Close';
 import Autorenew from '@mui/icons-material/Autorenew';
 import { useSnackbar } from 'notistack';
-import { useActionAllowed } from '@/common/permissions/permissions';
+import { useActionAllowed, APP_ID } from '@/common/permissions/permissions';
 import { Naming } from '@/console-sdk';
 import integrationsService from '@/services/integrations.service';
 
@@ -372,13 +372,13 @@ const Integraciones = () => {
                             </IconButton>
                           </span>
                         </Tooltip>
-                        <Tooltip title="Borrar consola">
+                        <Tooltip title={c.consoleId === APP_ID ? 'La consola mentor no se puede borrar' : 'Borrar consola'}>
                           <span>
                             <IconButton
                               size="small"
                               color="error"
                               onClick={() => onDelete(c.consoleId)}
-                              disabled={!canDelete || saving || !!editingId}
+                              disabled={!canDelete || saving || !!editingId || c.consoleId === APP_ID}
                             >
                               <Delete fontSize="small" />
                             </IconButton>

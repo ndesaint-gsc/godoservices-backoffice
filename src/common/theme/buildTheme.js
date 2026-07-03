@@ -96,10 +96,13 @@ export function buildTheme(brandKey = Brand.Godo) {
         defaultProps: { disableElevation: true, disableRipple: false },
         styleOverrides: {
           root: {
-            borderRadius: 8,
-            paddingInline: 18,
-            paddingBlock: 8,
+            borderRadius: 7,
+            paddingInline: 14,
+            paddingBlock: 5,
             fontWeight: 500,
+            fontSize: '0.8125rem',
+            lineHeight: 1.5,
+            minHeight: 32,
           },
           containedPrimary: {
             backgroundColor: '#111111',

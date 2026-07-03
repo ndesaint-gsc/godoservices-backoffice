@@ -65,6 +65,17 @@ POST   …/admin/roles     { "name", "description" }   -> 201 { name, prefixedNa
 PUT    …/admin/roles/{name}  { "description" }       -> 200                                       (description OBLIGATORIA)
 DELETE …/admin/roles/{name}                          -> 204
 ```
+
+### Membresías de rol (usuarios asignados al grupo Evolok, con ventana opcional)
+```
+GET    …/admin/roles/{name}/members                          -> { "members": [ { email, role, group, startDate, endDate } ] }
+POST   …/admin/roles/{name}/members  { email, startDate?, endDate? }  -> { email, role, group, startDate, endDate }   (email OBLIGATORIO; fechas ISO opcionales, null = sin límite)
+DELETE …/admin/roles/{name}/members?email=…                  -> 204
+```
+Asigna/quita un usuario (email) al **grupo Evolok** del rol (`{consoleId}-{ROL}`), con fechas de
+inicio/fin opcionales. Va por el seam `ConsoleRoleProvider` (impl por convenio hoy; la impl Evolok real
+creará la membresía temporal en Evolok). No altera el catálogo/privilegios (la membresía es de Evolok).
+
 > `GOD` es un rol **RESERVADO**: `POST/PUT/DELETE …/admin/roles/GOD` y `PUT/DELETE …/admin/privileges/GOD`
 > devuelven **400** (no creable/editable/borrable por la consola; el god siempre conserva acceso total).
 
@@ -129,7 +140,7 @@ POST   …/consoles              (integraciones.create) { product, console, godE
                                                        -> 201 { consoleId, product, appconsole, godEmail, godRole, godGroup, apiKey }   (apiKey EN CLARO, UNA vez)
 PUT    …/consoles/{consoleId}  (integraciones.edit)   { product, console, godEmail, apiKey? }
                                                        -> 200 { …masked }   (el god edita todos los campos; apiKey vacío = conservar; cambiar product/console = rename)
-DELETE …/consoles/{consoleId}  (integraciones.delete) -> 204
+DELETE …/consoles/{consoleId}  (integraciones.delete) -> 204   (welcome-console = mentor → 400, NO borrable)
 GET    …/consoles/mine?app=    (configuracion.view)   -> { consoleId, product, appconsole, rolePrefix, godRole, godGroup, godEmail, apiKey }   (config técnica; apiKey EN CLARO)
 ```
 
@@ -139,11 +150,25 @@ GET    …/consoles/mine?app=    (configuracion.view)   -> { consoleId, product,
 - **Config técnica del god** (`/consoles/mine`): identificadores + apikey **en claro** de la propia
   consola, para que el god configure el proxy de su producto. La ve el god (rol `GOD`, acceso total) o
   quien tenga `configuracion.view`.
-- **Persistencia**: **en memoria; NO hay DB**. El registry de consolas (`ConsoleRegistry`) se **siembra**
-  de la propiedad `console.products` (`.properties`: `consoleId:product:appconsole:apiKey:godEmail;…`) o de
-  un default (`welcome-console`); el catálogo + mapa de roles/privilegios (`ConsolePermissionsRegistry`) se
-  siembra desde código (`ConsolePermissionsCatalog`). Las mutaciones (crear/editar consola, catálogo,
-  privilegios) viven solo en memoria → se pierden al reiniciar. TODO: PostgreSQL detrás de la misma firma.
+- **Persistencia (seam listo)**: el estado runtime vive en memoria (`ConsoleRegistry` + la estática
+  `ConsolePermissionsRegistry` + descripciones), y `ConsoleConfigService` lo **sincroniza** con el seam
+  **`ConsoleConfigStore`** — un documento JSON por consola (`ConsoleConfigDocument`: meta + catalog +
+  permissions + roleDescriptions), pensado para una columna `content` JSONB keyed por `consoleId`.
+  - **Al arranque** (`restore()`) carga del store y reconstruye los registries; **en cada mutación**
+    (`persist()`) guarda el snapshot. **Cache** `ConsoleConfigCache` (LRU N + TTL, `ensureLoaded()` cache-first)
+    delante del store para que la verificación de accesos no vaya al store en cada request.
+  - **Persistencia real = MISMO mecanismo que EvolokConfig**: `ContentConsoleConfigStore` guarda un Content
+    de nickel (`ConsoleConfigsContent`, tipo `CONSOLE_CONFIGS`) en DB **POSTGRES_CACHED** vía
+    `ContentRepository`+`TransactionService`. Se activa con **`console.config.store=content`**; por defecto
+    `InMemoryConsoleConfigStore` (`@ConditionalOnMissingBean`, sin durabilidad, no depende de DB en dev).
+  - ⚠️ **PENDIENTE (no hecho aún)**: la tabla de contenido **NO se autocrea** al arrancar (nickel solo llama
+    `createTable` en tests). Antes de usar `store=content` hay que crearla en TES (y pre/pro):
+    `CREATE TABLE IF NOT EXISTS lv_console_configs (id TEXT PRIMARY KEY, json JSONB, creationinstant timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP);`
+    (nombre = `{tenantCode}_{typeCode}` = `lv` + `console-configs`; confirmar prefijo con `lv_evolok_config`).
+  - **welcome-console (mentor) queda FUERA del store**: su config es hardcodeada (seed de código,
+    `ConsolePermissionsCatalog` + default de `ConsoleRegistry`); no se persiste ni se restaura, para no
+    perderla nunca. El registry de consolas además se **siembra** de la propiedad `console.products`
+    (`.properties`: `consoleId:product:appconsole:apiKey:godEmail;…`) o del default `welcome-console`.
 
 ## Cliente (SDK React `console-sdk`)
 
@@ -175,5 +200,6 @@ const myConfig = await sdk.consoles.mine();    // { consoleId, rolePrefix, godGr
 - `service/ConsoleRolesCache` (seam) + `impl/InMemoryConsoleRolesCache` + `ConsoleRolesCacheConfig` (@ConditionalOnMissingBean).
 - `service/ConsoleRegistry` — CRUD de consolas (consoleId/apiKey→producto, `godEmail`, `create`/`remove`/`list`, `GOD_ROLE`).
 - `service/ConsoleRoleProvider` + `impl/NamingConsoleRoleProvider` (por convenio de nombre).
-- `privileges/ConsolePermissionsRegistry` (motor; `GOD` = acceso total special-case + reservado; LV se registra vía `WelcomeConsolePermissionsSeed`).
-- Store en memoria (TODO: PostgreSQL). Provisioning del grupo en Evolok = seam `ConsoleRoleProvider` (TODO impl real).
+- `privileges/ConsolePermissionsRegistry` (motor estático; `GOD` = acceso total special-case + reservado; welcome-console se registra vía `WelcomeConsolePermissionsSeed`).
+- **Persistencia**: `service/ConsoleConfigStore` (seam) + `impl/InMemoryConsoleConfigStore` + `ConsoleConfigStoreConfig` (@ConditionalOnMissingBean) + `service/ConsoleConfigService` (restore/persist, excluye welcome-console) + `service/ConsoleConfigDocument` (JSON por consola). Default in-memory; DB (JSONB) = drop-in bean.
+- Provisioning del grupo en Evolok = seam `ConsoleRoleProvider` (TODO impl real).
