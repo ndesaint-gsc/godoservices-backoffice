@@ -5,7 +5,7 @@
 > catálogo** del framework *web-and-console-integrations* (identificadores + apikey del god + tabs/
 > acciones/datos). Este documento describe una función **distinta**: un editor curado de la config
 > remota de Evolok (statusFront, feature flags, cooldown). Sigue **pendiente** y necesita **otra ruta/
-> nombre** (p.ej. `/configuracion-evolok` o dentro de Herramientas). Ver `../src/console-sdk/CONTRACT.md`.
+> nombre** (p.ej. `/configuracion-evolok` o dentro de Herramientas). Ver `../src/edge-console-sdk/CONTRACT.md`.
 
 Status: **design approved** (prototype validated 2026-05-29). Not yet implemented (route pending re-assignment).
 Prototype: `../../prototype-config-page.html` (throwaway, MUI + real cooldown).

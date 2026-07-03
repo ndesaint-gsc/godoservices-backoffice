@@ -1,7 +1,7 @@
-// Permisos de la consola. Los hooks de verificación viven ahora en el console-sdk (independiente de
+// Permisos de la consola. Los hooks de verificación viven ahora en el edge-console-sdk (independiente de
 // redux); aquí se reexportan para no cambiar los ~10 consumidores. El snapshot de permisos lo alimenta
 // <ConsoleProvider> en App.jsx desde redux.
-export { useTabVisible, useActionAllowed, useFieldMode } from '@/console-sdk/react';
+export { useTabVisible, useActionAllowed, useFieldMode } from '@/edge-console-sdk/react';
 
 // appId de esta consola (la MENTOR): producto GGOBO (grupogodo business object, id `welcome`) +
 // appconsole `console` → consoleId `welcome-console`. Es el `?app=` contra el backend y el prefijo de

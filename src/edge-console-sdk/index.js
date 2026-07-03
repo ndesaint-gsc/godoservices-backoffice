@@ -1,4 +1,4 @@
-// console-sdk — interfaz pública única.
+// edge-console-sdk — interfaz pública única.
 //
 // Módulo independiente (sin redux/MUI). Modelo:
 //   - AUTH del operador + sus ROLES → DIRECTO contra Evolok (la app pasa `getEvolokSession`, que reusa

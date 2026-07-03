@@ -1,4 +1,4 @@
-// Administración del registry de permisos (editor /permisos). Delega en el console-sdk (plano sesión).
+// Administración del registry de permisos (editor /permisos). Delega en el edge-console-sdk (plano sesión).
 import sdk from '@/services/console';
 
 // GET …/web-and-console-integrations/auth/permissions -> { roles, tabs, actions, fields, permissions }

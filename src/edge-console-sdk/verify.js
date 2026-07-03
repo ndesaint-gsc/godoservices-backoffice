@@ -1,4 +1,4 @@
-// console-sdk/verify.js
+// edge-console-sdk/verify.js
 // Verificación de permisos — funciones PURAS sobre un snapshot de permisos (sin React, sin redux).
 // El snapshot tiene la forma { tabs:{key:'visible'|'hidden'}, actions:{key:'allowed'|'denied'},
 // fields:{key:'editable'|'viewable'|'hidden'} } tal como lo devuelve el endpoint …/auth/me.

@@ -1,4 +1,4 @@
-// console-sdk/consoles.js
+// edge-console-sdk/consoles.js
 // Admin de CONSOLAS de la plataforma (consola mentor godoservices-backoffice) + config técnica del god.
 // Autorización = enforcement por privilegio: el backend resuelve los roles del operador contra Evolok
 // (parámetro `app` = consoleId desde el que opera) y exige la tab de integración / config. NO usa apikey.

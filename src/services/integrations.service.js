@@ -1,5 +1,5 @@
 // Admin de CONSOLAS de la plataforma (consola mentor) + config técnica del god. Delega en el
-// console-sdk (plano sesión: enforcement por privilegio, sin apikey). Ver console-sdk/consoles.js.
+// edge-console-sdk (plano sesión: enforcement por privilegio, sin apikey). Ver edge-console-sdk/consoles.js.
 import sdk from '@/services/console';
 
 // [{ consoleId, product, appconsole, godEmail, godRole, godGroup, hasApiKey, apiKeyMasked }]

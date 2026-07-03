@@ -1,4 +1,4 @@
-// console-sdk/auth.js
+// edge-console-sdk/auth.js
 // AUTH del operador = DIRECTA contra Evolok (no pasa por nuestro backend). El SDK no habla con Evolok
 // por su cuenta: la app le pasa `getEvolokSession` (que reusa el IC web / evl-accounts.js) y aquí solo
 // se normaliza: se quitan los grupos con el prefijo {consoleId}- → roles pelados (el prefijo se OCULTA

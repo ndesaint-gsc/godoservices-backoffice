@@ -1,11 +1,12 @@
 # Web & Console Integrations — Contrato (fuente de verdad)
 
-Framework para integrar webs y consolas de terceros al sistema Godó. Backend en web-core
-(`com.grupogodo.welcome.webandconsoleintegrations`); **consola mentor / plantilla de todas**:
-godoservices-backoffice (futura welcome-console). LV (`/perfil/console`) es un cliente más. Cambios de
-forma → aquí primero.
+Framework para integrar webs y consolas de terceros al sistema Godó. El backend del framework
+(`com.grupogodo.edge.console`) **proporciona auth, roles y privilegios** a cualquier consola; no es una
+consola en sí. La **consola mentor (de referencia)** es `com.grupogodo.welcome.console`
+(godoservices-backoffice = welcome-console), un **cliente** de este framework igual que LV
+(`/perfil/console`). Cambios de forma → aquí primero.
 
-**Base de endpoints backend:** `/perfil/welcome/web-and-console-integrations`
+**Base de endpoints backend:** `/perfil/edge/console` (alias legacy conservado: `/perfil/welcome/web-and-console-integrations`)
 
 ## Modelo (importante)
 
@@ -170,7 +171,7 @@ GET    …/consoles/mine?app=    (configuracion.view)   -> { consoleId, product,
     perderla nunca. El registry de consolas además se **siembra** de la propiedad `console.products`
     (`.properties`: `consoleId:product:appconsole:apiKey:godEmail;…`) o del default `welcome-console`.
 
-## Cliente (SDK React `console-sdk`)
+## Cliente (SDK React `edge-console-sdk`)
 
 ```js
 const sdk = createConsole({ consoleId: 'welcome-console', getEvolokSession });   // getEvolokSession = IC web
@@ -190,7 +191,7 @@ await sdk.consoles.remove('running-console');
 const myConfig = await sdk.consoles.mine();    // { consoleId, rolePrefix, godGroup, apiKey, … }
 ```
 
-## Backend — clases (web-core `…webandconsoleintegrations`)
+## Backend — clases (web-core `com.grupogodo.edge.console`)
 
 - `controller/ConsoleProvisioningController` — plano `…/admin/**` (roles/privilegios/catálogo; protege `GOD` reservado).
 - `controller/IntegrationConsolesController` — plano `…/consoles/**` (alta/baja/lista de consolas + `/mine` config del god).

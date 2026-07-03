@@ -2,7 +2,7 @@
 
 Consola de operador (backoffice) del grupo Godó en React. Es la **consola MENTOR/plantilla** del framework de integración *web-and-console-integrations*: `consoleId = welcome-console` (producto **GGOBO**, id `welcome`, + appconsole `console`). De ella derivan las demás consolas de producto. Un operador busca un usuario y gestiona sus datos, suscripciones, notificaciones y facturación, además de herramientas globales, la administración de consolas de la plataforma y la configuración/permisos de la propia consola.
 
-> El contrato del framework (fuente de verdad) está en [`src/console-sdk/CONTRACT.md`](src/console-sdk/CONTRACT.md); el SDK independiente en [`src/console-sdk/`](src/console-sdk/README.md).
+> El contrato del framework (fuente de verdad) está en [`src/edge-console-sdk/CONTRACT.md`](src/edge-console-sdk/CONTRACT.md); el SDK independiente en [`src/edge-console-sdk/`](src/edge-console-sdk/README.md).
 
 ## Stack
 
@@ -39,7 +39,7 @@ npm run format
 
 El proxy de Vite reenvía `/perfil/*` al backend. Dos familias:
 - **Operación de la consola** bajo `/perfil/console/**` (web-lv: `…/user/**`, `…/views/**`, `…/invoices/**`; web-core: config, retención, etc.).
-- **Framework de integración** bajo `/perfil/welcome/web-and-console-integrations/**` (web-core, paquete `com.grupogodo.welcome.webandconsoleintegrations`):
+- **Framework de integración** bajo `/perfil/edge/console/**` (alias legacy: `/perfil/welcome/web-and-console-integrations/**`; web-core, paquete `com.grupogodo.edge.console`):
   - `…/admin/**` (apikey `X-Console-ApiKey` vía proxy): roles, privilegios y **catálogo** (tabs/acciones/datos) de la consola.
   - `…/consoles/**` (enforcement por sesión Evolok): alta/baja/edición de **consolas** de la plataforma + `/mine` (config técnica del god).
 
@@ -60,7 +60,7 @@ El proxy de Vite reenvía `/perfil/*` al backend. Dos familias:
 
 ## Auth, roles y permisos
 
-Modelo del framework (ver `console-sdk/CONTRACT.md`):
+Modelo del framework (ver `edge-console-sdk/CONTRACT.md`):
 - **Auth del operador + sus ROLES → DIRECTO contra Evolok desde el JS** (reusando el IC web; la app aporta `getEvolokSession`). El SDK recibe los grupos `{consoleId}-{ROL}` y **quita el prefijo** → roles pelados. En DEV hay un **mock** (`services/console.js` → `getEvolokSession`) que respeta el *role switcher*; TODO: cablear el IC real.
 - **El backend hace solo**: (1) admin de roles/privilegios + **catálogo**; (2) cargar el mapa de privilegios por rol(es); (3) **enforcement** de operaciones (`@ConsolePrivilege`, valida `ev_gg_bo` contra Evolok con caché). Flag `EvolokConfig.consoleMock` (default true): en dev, apikey no exigida y enforcement omitido.
 - **Permisos por rol** en 3 dimensiones: `tabs` (visible/hidden), `actions` (allowed/denied), `fields` (editable/viewable/hidden). El **catálogo** (universo de claves) lo define cada consola y se edita desde **Configuración**; se guarda en el mismo JSON que el mapa rol→privilegios.
@@ -74,7 +74,7 @@ Modelo del framework (ver `console-sdk/CONTRACT.md`):
 
 ```
 src/
-  console-sdk/                       SDK independiente del framework (sin redux/MUI): client, auth (Evolok),
+  edge-console-sdk/                       SDK independiente del framework (sin redux/MUI): client, auth (Evolok),
                                      admin (roles/privilegios/catálogo), consoles (alta/edición/config god),
                                      verify, keys, react/ (provider+hooks). CONTRACT.md = fuente de verdad.
   views/<feature>/index.jsx          páginas (datos, suscripciones/*, notificaciones, facturacion,

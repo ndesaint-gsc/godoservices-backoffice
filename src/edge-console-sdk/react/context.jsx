@@ -1,4 +1,4 @@
-// console-sdk/react/context.jsx
+// edge-console-sdk/react/context.jsx
 // Adaptador React OPCIONAL del SDK. Mantiene el SDK core agnóstico de React/redux: el snapshot de
 // permisos se inyecta vía `value`, así la app decide de dónde sale (redux, estado propio, sdk.auth…).
 

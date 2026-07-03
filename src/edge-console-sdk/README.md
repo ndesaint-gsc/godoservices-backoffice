@@ -1,4 +1,4 @@
-# console-sdk
+# edge-console-sdk
 
 Módulo **independiente** (sin redux/MUI, con sus propios clientes de endpoint) para integrar una
 consola/backoffice con el sistema Godó. Contrato en [`CONTRACT.md`](./CONTRACT.md).
@@ -13,7 +13,7 @@ consola/backoffice con el sistema Godó. Contrato en [`CONTRACT.md`](./CONTRACT.
 ## Estructura
 
 ```
-console-sdk/
+edge-console-sdk/
   client.js      createConsoleClient({ baseUrl, apiKey, onUnauthorized })   // apiKey solo S2S; en navegador la pone el proxy
   auth.js        getOperator(roleOverride) → { operator, roles }            // Evolok directo; quita prefijo
   admin.js       getPermissions(), savePermissions(role, perms),
@@ -30,7 +30,7 @@ console-sdk/
 ## Interfaz de uso
 
 ```js
-import { createConsole } from '@/console-sdk';
+import { createConsole } from '@/edge-console-sdk';
 
 // getEvolokSession: lo aporta la app (IC web / evl-accounts.js). Devuelve { operator, groups }.
 const sdk = createConsole({ consoleId: 'welcome-console', getEvolokSession });
@@ -64,7 +64,7 @@ const myConfig = await sdk.consoles.mine();               // { consoleId, rolePr
 ### React
 
 ```jsx
-import { ConsoleProvider, useTabVisible, useActionAllowed } from '@/console-sdk/react';
+import { ConsoleProvider, useTabVisible, useActionAllowed } from '@/edge-console-sdk/react';
 
 <ConsoleProvider value={{ permissions, role, roles }}>
   <App />

@@ -10,14 +10,14 @@ import Modal from '@/components/common/modal';
 import { selectCustomer, setCustomer } from '@/common/features/customer/customerSlice';
 import { loadPermissions } from '@/common/features/auth/authSlice';
 import { selectPermissions, selectRole } from '@/common/permissions/permissions';
-import { ConsoleProvider } from '@/console-sdk/react';
+import { ConsoleProvider } from '@/edge-console-sdk/react';
 import userService from '@/services/user.service';
 
 function App() {
   const dispatch = useDispatch();
   const isAuthenticated = useSelector((s) => s.auth.isAuthenticated);
   const persistedGuid = useSelector(selectCustomer)?.guid;
-  // Snapshot de permisos para el console-sdk (los hooks useTabVisible/… lo leen del provider).
+  // Snapshot de permisos para el edge-console-sdk (los hooks useTabVisible/… lo leen del provider).
   const permissions = useSelector(selectPermissions);
   const role = useSelector(selectRole);
   const roles = useSelector((s) => s.auth.user?.roles) || (role ? [role] : []);

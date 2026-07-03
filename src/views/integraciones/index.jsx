@@ -26,7 +26,7 @@ import Close from '@mui/icons-material/Close';
 import Autorenew from '@mui/icons-material/Autorenew';
 import { useSnackbar } from 'notistack';
 import { useActionAllowed, APP_ID } from '@/common/permissions/permissions';
-import { Naming } from '@/console-sdk';
+import { Naming } from '@/edge-console-sdk';
 import integrationsService from '@/services/integrations.service';
 
 // Generador de apikey (cliente): 32 hex, como la del backend. El backend la guarda tal cual.

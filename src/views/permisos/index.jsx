@@ -17,7 +17,7 @@ import {
 } from '@mui/material';
 import { useSnackbar } from 'notistack';
 import { APP_ID, useActionAllowed } from '@/common/permissions/permissions';
-import { Naming } from '@/console-sdk';
+import { Naming } from '@/edge-console-sdk';
 import permissionsAdminService from '@/services/permissionsAdmin.service';
 
 const FIELD_MODES = ['editable', 'viewable', 'hidden'];

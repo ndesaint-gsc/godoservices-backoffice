@@ -1,4 +1,4 @@
-// console-sdk/react/hooks.js
+// edge-console-sdk/react/hooks.js
 // Hooks finos: leen el snapshot del ConsoleContext y delegan en las funciones puras de verify.js /
 // keys.js. Ningún acoplamiento a redux ni al shape state.auth.* — eso queda del lado de la app, que
 // alimenta el <ConsoleProvider>.

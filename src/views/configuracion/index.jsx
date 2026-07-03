@@ -20,7 +20,7 @@ import Lock from '@mui/icons-material/Lock';
 import Add from '@mui/icons-material/Add';
 import { useSnackbar } from 'notistack';
 import { useActionAllowed } from '@/common/permissions/permissions';
-import { RESERVED_TABS, RESERVED_ACTIONS } from '@/console-sdk';
+import { RESERVED_TABS, RESERVED_ACTIONS } from '@/edge-console-sdk';
 import integrationsService from '@/services/integrations.service';
 import permissionsAdminService from '@/services/permissionsAdmin.service';
 

@@ -1,4 +1,4 @@
-// Operador + permisos, vía console-sdk.
+// Operador + permisos, vía edge-console-sdk.
 // - getOperator: identidad + roles del operador desde Evolok (directo). roleOverride solo DEV.
 // - resolvePermissions: mapa de privilegios fusionado para esos roles (backend …/admin/privileges/resolve).
 import sdk from '@/services/console';
