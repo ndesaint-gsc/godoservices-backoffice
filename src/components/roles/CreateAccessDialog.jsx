@@ -161,7 +161,7 @@ const CreateAccessDialog = ({ open, evUser, onClose, onCreated }) => {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose} disabled={saving}>
+          <Button onClick={onClose} disabled={saving} color="inherit">
             Cancelar
           </Button>
           <Button

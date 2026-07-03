@@ -1,13 +1,28 @@
 import { createTheme } from '@mui/material/styles';
 import { BRANDS, Brand } from './brand';
 
-// Estilo "relleno" para botones outlined/text: fondo = color.main, texto = contrastText (invierte el
-// outlined clásico), hover a color.dark, y estado disabled estándar. Resuelve el color del ownerState
-// (primary por defecto; secondary/error/warning/success/info si se indica).
+// Estilo de botones outlined/text. Convención:
+//  - color="inherit"  → botón "cancelar/cerrar": FONDO BLANCO, TEXTO NEGRO, borde sutil (único ghost).
+//  - resto de colores → RELLENO: fondo = color.main, texto = contrastText (invierte el outlined clásico).
 function filledButton(theme, ownerState) {
-  const key =
-    ownerState?.color && ownerState.color !== 'inherit' ? ownerState.color : 'primary';
-  const pal = theme.palette[key] || theme.palette.primary;
+  const color = ownerState?.color || 'primary';
+  if (color === 'inherit') {
+    return {
+      backgroundColor: theme.palette.background.paper, // blanco
+      color: theme.palette.text.primary, // negro
+      border: '1px solid ' + theme.palette.divider,
+      '&:hover': {
+        backgroundColor: theme.palette.action.hover,
+        borderColor: theme.palette.divider,
+      },
+      '&.Mui-disabled': {
+        backgroundColor: theme.palette.background.paper,
+        color: theme.palette.action.disabled,
+        borderColor: theme.palette.divider,
+      },
+    };
+  }
+  const pal = theme.palette[color] || theme.palette.primary;
   return {
     backgroundColor: pal.main,
     color: pal.contrastText,

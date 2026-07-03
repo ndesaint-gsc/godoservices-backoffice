@@ -53,7 +53,7 @@ El proxy de Vite reenvía `/perfil/*` al backend. Dos familias:
 - **Suscripciones** — Digitales, Impresas y beneficiario, Mobile (Apple/Google) con acciones, Accesos temporales (crear/revocar rol), Crear telemática (enviar oferta), y beneficiarios corporativos (alta/baja/import/export).
 - **Notificaciones** — opt-ins + newsletters/intereses.
 - **Facturación** — listar/PDF, sustitutiva/rectificativa/abono, recalcular, dirección fiscal.
-- **Herramientas** (global, sin cliente) — crear usuario, NIF masivo, roles masivo, landings, retención, buscar por externalId.
+- **Herramientas** (global, sin cliente) — crear usuario, NIF masivo, roles masivo (con **fichero de ejemplo** descargable, generado en cliente según GUIDs/Emails), landings, retención, buscar por externalId.
 - **Permisos** (`/permisos`) — editor de la matriz rol→permisos de la consola. Lista tabs/acciones/datos **desde el JSON del backend** (catálogo), en orden alfabético y a 2 columnas.
 - **Configuración** (`/configuracion`) — config técnica de la propia consola (identificadores + apikey del god) **y editor del catálogo** (tabs/acciones/datos que aparecen en Permisos). `permisos` y `configuracion` son tabs reservadas (siempre presentes, no borrables); sin duplicados.
 - **Integraciones** (`/integraciones`, última del nav) — admin de las **consolas de la plataforma**: alta/baja/edición (todos los campos, con generador de apikey). Cada consola tiene un god (rol `GOD`, acceso total) con email.
@@ -90,7 +90,9 @@ src/
     providers/ModalProvider/
     router/                          Routes + AuthenticatedRoute + UnauthenticatedRoute + nav.config (tabKey/placement)
     store/store.js                   RTK store + redux-persist
-    theme/                           tema multi-marca (LV/MD/R1); botones outlined/text con fondo (invertidos)
+    theme/                           tema multi-marca (LV/MD/R1). Botones (buildTheme.js): compactos; outlined/text
+                                     RELLENOS por color (invertidos); excepción `color="inherit"` = cancelar/cerrar
+                                     (fondo blanco, texto negro, borde) — el único ghost.
 ```
 
 Path alias: `@/` → `src/`.
@@ -102,4 +104,5 @@ Path alias: `@/` → `src/`.
 - Alias `@/` en todos los imports.
 - Los service files exportan un objeto con los métodos.
 - `useActionAllowed`/`useTabVisible`/`useFieldMode` para gating; `guid` del cliente cargado vía `customer?.raw?.evUser?.guid`.
+- Botones: por defecto van rellenos. Para **Cancelar/Cerrar** usa `color="inherit"` (queda blanco con texto negro).
 - Sin comentarios salvo lo no obvio.

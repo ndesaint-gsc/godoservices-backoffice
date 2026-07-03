@@ -211,7 +211,7 @@ const RecalculateInvoiceDialog = ({ open, transactionId, onClose, onConfirm }) =
         )}
       </DialogContent>
       <DialogActions>
-        <Button type="button" variant="text" onClick={onClose} disabled={busy}>
+        <Button type="button" variant="text" color="inherit" onClick={onClose} disabled={busy}>
           Cancelar
         </Button>
         <Button

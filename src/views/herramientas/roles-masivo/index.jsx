@@ -4,6 +4,7 @@ import {
   Box,
   Button,
   CircularProgress,
+  Link,
   MenuItem,
   Paper,
   Stack,
@@ -11,6 +12,7 @@ import {
   Typography,
 } from '@mui/material';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
+import DownloadIcon from '@mui/icons-material/Download';
 import { useSnackbar } from 'notistack';
 import { useHasPrivilege } from '@/common/permissions/useHasPrivilege';
 import { useActionAllowed } from '@/common/permissions/permissions';
@@ -19,6 +21,27 @@ import { sortByText } from '@/common/sort';
 import rolesService from '@/services/roles.service';
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+// Fichero de ejemplo (una fila por GUID o por Email, sin cabecera — como espera el backend).
+const EXAMPLE_ROWS = {
+  guid: ['3fa85f64-5717-4562-b3fc-2c963f66afa6', '16fd2706-8baf-433b-82eb-8c7fada847da', '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d'],
+  email: ['usuario1@ejemplo.com', 'usuario2@ejemplo.com', 'usuario3@ejemplo.com'],
+};
+
+// Genera y descarga el CSV de ejemplo en cliente (sin depender de estáticos del tenant).
+const downloadExample = (kind) => {
+  const type = EXAMPLE_ROWS[kind] ? kind : 'email';
+  const csv = EXAMPLE_ROWS[type].join('\r\n') + '\r\n';
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `roles-masivo-ejemplo-${type}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+};
 
 // Contenido del fichero: cada fila es un GUID o un Email (igual que el select
 // `contentOption` del backoffice antiguo).
@@ -161,6 +184,16 @@ const RolesMasivo = () => {
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                   {csvFile ? csvFile.name : 'Ningún fichero seleccionado'}
                 </Typography>
+                <Link
+                  component="button"
+                  type="button"
+                  onClick={() => downloadExample(contentOption)}
+                  underline="hover"
+                  sx={{ mt: 1, display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: '0.8125rem' }}
+                >
+                  <DownloadIcon fontSize="inherit" />
+                  Descargar ejemplo ({contentOption === 'guid' ? 'GUIDs' : 'Emails'})
+                </Link>
               </Box>
 
               <TextField

@@ -157,7 +157,7 @@ const RetentionEditDialog = ({ open, typeDef, item, index, tenant, onClose, onSa
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose} disabled={saving}>
+          <Button onClick={onClose} disabled={saving} color="inherit">
             Cancelar
           </Button>
           <Button

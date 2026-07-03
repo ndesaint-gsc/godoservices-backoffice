@@ -160,7 +160,7 @@ const FiscalAddressCard = ({ evUser, canEdit, guid }) => {
                 Eliminar dirección fiscal
               </Button>
             )}
-            <Button type="button" variant="text" onClick={cancelEdit} disabled={saving}>
+            <Button type="button" variant="text" color="inherit" onClick={cancelEdit} disabled={saving}>
               Cancelar
             </Button>
             <Button
