@@ -36,7 +36,7 @@ const downloadExample = (kind) => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `roles-masivo-ejemplo-${type}.csv`;
+  a.download = `roles-masivo-template-${type}.csv`;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -184,16 +184,28 @@ const RolesMasivo = () => {
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                   {csvFile ? csvFile.name : 'Ningún fichero seleccionado'}
                 </Typography>
-                <Link
-                  component="button"
-                  type="button"
-                  onClick={() => downloadExample(contentOption)}
-                  underline="hover"
-                  sx={{ mt: 1, display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: '0.8125rem' }}
-                >
-                  <DownloadIcon fontSize="inherit" />
-                  Descargar ejemplo ({contentOption === 'guid' ? 'GUIDs' : 'Emails'})
-                </Link>
+                <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+                  <Link
+                    component="button"
+                    type="button"
+                    onClick={() => downloadExample('email')}
+                    underline="hover"
+                    sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: '0.8125rem' }}
+                  >
+                    <DownloadIcon fontSize="inherit" />
+                    Descargar template emails
+                  </Link>
+                  <Link
+                    component="button"
+                    type="button"
+                    onClick={() => downloadExample('guid')}
+                    underline="hover"
+                    sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: '0.8125rem' }}
+                  >
+                    <DownloadIcon fontSize="inherit" />
+                    Descargar template GUIDs
+                  </Link>
+                </Stack>
               </Box>
 
               <TextField
