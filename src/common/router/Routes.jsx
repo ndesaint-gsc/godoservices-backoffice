@@ -24,6 +24,8 @@ import HtLandings from '@/views/herramientas/landings';
 import HtRetencion from '@/views/herramientas/retencion';
 import HtBuscarExternalId from '@/views/herramientas/buscar-externalid';
 import Permisos from '@/views/permisos';
+import Integraciones from '@/views/integraciones';
+import Configuracion from '@/views/configuracion';
 
 const RequireCustomer = ({ children }) => {
   const hasCustomer = useSelector(selectHasCustomer);
@@ -98,6 +100,10 @@ const AppRoutes = () => (
 
     {/* Editor de permisos (meta): solo auth; el acceso real se gobierna por el tab 'permisos' (ADMIN). */}
     <Route path="/permisos" element={<AuthenticatedRoute><Permisos /></AuthenticatedRoute>} />
+    {/* Admin de integración (consolas de la plataforma): gated por el tab 'integraciones'. */}
+    <Route path="/integraciones" element={<AuthenticatedRoute><Integraciones /></AuthenticatedRoute>} />
+    {/* Config técnica de la propia consola (god): gated por el tab 'configuracion'. */}
+    <Route path="/configuracion" element={<AuthenticatedRoute><Configuracion /></AuthenticatedRoute>} />
 
     <Route path="*" element={<NotFound />} />
   </Routes>

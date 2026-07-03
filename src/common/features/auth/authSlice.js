@@ -1,14 +1,13 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import authService from '@/services/auth.service';
 import operatorService from '@/services/operator.service';
-import { APP_ID } from '@/common/permissions/permissions';
 
 const initialState = {
   isAuthenticated: false,
   isLoading: false,
   user: null,
   error: null,
-  // Rol + permisos resueltos por el backend (GET /perfil/console/auth/me). null = aún no cargados.
+  // Rol + permisos resueltos por el backend (…/web-and-console-integrations/auth/me). null = aún no cargados.
   role: null,
   permissions: null,
 };
@@ -29,13 +28,15 @@ export const logout = createAsyncThunk('auth/logout', async () => {
   await authService.logout();
 });
 
-// Carga rol + permisos del operador desde el backend (registry keyed por app).
+// Carga operador + roles (Evolok directo) + mapa de privilegios (backend por rol).
 // roleOverride: solo DEV (el switcher de rol) para previsualizar permisos de cada rol.
 export const loadPermissions = createAsyncThunk(
   'auth/loadPermissions',
   async (roleOverride, { rejectWithValue }) => {
     try {
-      return await operatorService.getMe(APP_ID, roleOverride);
+      const { operator, roles } = await operatorService.getOperator(roleOverride);
+      const permissions = await operatorService.resolvePermissions(roles);
+      return { operator, roles, permissions };
     } catch (err) {
       return rejectWithValue(err?.message || 'No se pudieron cargar los permisos');
     }
@@ -77,13 +78,15 @@ const authSlice = createSlice({
         state.error = action.payload || action.error?.message || 'Login failed';
       })
       .addCase(loadPermissions.fulfilled, (state, action) => {
-        state.role = action.payload?.role ?? null;
-        state.permissions = action.payload?.permissions ?? null;
-        // Refleja los roles del backend en user.roles para el shim useHasPrivilege y el display.
-        // `me` devuelve roles[] (multi-rol Evolok); fallback al rol único si no viene.
-        const roles = action.payload?.roles ?? (action.payload?.role ? [action.payload.role] : []);
-        if (state.user) {
-          state.user.roles = roles;
+        // roles vienen de Evolok (directo); permissions es el mapa fusionado del backend.
+        const roles = action.payload?.roles || [];
+        state.role = roles[0] || null;
+        state.permissions = action.payload?.permissions || null;
+        const operator = action.payload?.operator;
+        if (operator) {
+          state.user = { ...operator, roles };
+        } else if (state.user) {
+          state.user = { ...state.user, roles };
         }
       })
       .addCase(logout.fulfilled, (state) => {

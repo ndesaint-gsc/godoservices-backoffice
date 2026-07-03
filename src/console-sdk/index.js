@@ -1,35 +1,46 @@
 // console-sdk — interfaz pública única.
 //
-// Módulo independiente dedicado SOLO a: auth de operador, admin de roles/privilegios y verificación
-// de permisos, con los clientes de endpoint incluidos. Sin dependencias de redux ni MUI. El
-// adaptador React (provider + hooks) vive en './react' y es opcional.
+// Módulo independiente (sin redux/MUI). Modelo:
+//   - AUTH del operador + sus ROLES → DIRECTO contra Evolok (la app pasa `getEvolokSession`, que reusa
+//     el IC web). El SDK quita el prefijo {consoleId}- → roles pelados.
+//   - PRIVILEGIOS: el backend sirve el mapa por rol(es) (privileges.resolve) y el admin de roles/
+//     privilegios (…/admin/**, apikey inyectada por el proxy).
+//   - Verificación en pantalla: funciones puras (verify) sobre el snapshot de permisos.
 //
-// Uso típico (plano sesión, dentro de la consola):
-//   import { createConsole } from '@/console-sdk';
-//   const sdk = createConsole({ appId: 'lv-console' });
-//   const me = await sdk.auth.getMe();           // { operator, role, roles, permissions }
-//   const map = await sdk.admin.getPermissions(); // editor de permisos
-//   sdk.verify.actionAllowed(me.permissions, 'datos.delete');
-//
-// Uso provisioning (S2S, backend de producto o script de alta):
-//   const sdk = createConsole({ apiKey: '<key>' });
+// Uso:
+//   const sdk = createConsole({ consoleId: 'welcome-console', getEvolokSession });
+//   const { operator, roles } = await sdk.auth.getOperator();
+//   const permissions = await sdk.privileges.resolve(roles);
+//   sdk.verify.actionAllowed(permissions, 'datos.delete');
+//   // admin (editor de permisos / alta de roles):
 //   await sdk.admin.roles.create('editor', 'Editor de contenidos');
-//   await sdk.admin.privileges.set('editor', { tabs:{…}, actions:{…}, fields:{…} });
 
 import { createConsoleClient, ConsoleError } from './client';
 import { createAuthApi } from './auth';
 import { createAdminApi } from './admin';
+import { createConsolesApi } from './consoles';
+import { ADMIN } from './paths';
 import * as verify from './verify';
 import * as keys from './keys';
+
+const EMPTY_PERMS = { tabs: {}, actions: {}, fields: {} };
 
 export function createConsole(config = {}) {
   const client = createConsoleClient(config);
   return {
     client,
-    mode: client.mode,
-    appId: client.appId,
-    auth: createAuthApi(client),
+    consoleId: config.consoleId,
+    auth: createAuthApi(config),
     admin: createAdminApi(client),
+    // Admin de consolas de la plataforma (integración) + config técnica del god (mine).
+    consoles: createConsolesApi(client, config.consoleId),
+    // Carga el mapa de privilegios (fusionado) para los roles dados. Los roles vienen de Evolok.
+    privileges: {
+      resolve: (roles) =>
+        client
+          .get(ADMIN + '/privileges/resolve', { params: { roles: (roles || []).join(',') } })
+          .then((r) => r?.permissions || EMPTY_PERMS),
+    },
     verify, // funciones puras sobre un snapshot de permisos
     keys, // Role / Tab / Priv / hasPrivilege
   };

@@ -1,140 +1,179 @@
-# Console Integration — Contrato de endpoints (fuente de verdad)
+# Web & Console Integrations — Contrato (fuente de verdad)
 
-Contrato compartido entre el **SDK React** (`src/console-sdk/`) y el **backend web-core**
-(`com.grupogodo.welcome.console`). Genérico y reutilizable por cualquier producto; La Vanguardia
-es el primer consumidor. Cualquier cambio de forma se hace aquí primero.
+Framework para integrar webs y consolas de terceros al sistema Godó. Backend en web-core
+(`com.grupogodo.welcome.webandconsoleintegrations`); **consola mentor / plantilla de todas**:
+godoservices-backoffice (futura welcome-console). LV (`/perfil/console`) es un cliente más. Cambios de
+forma → aquí primero.
 
-## Conceptos
+**Base de endpoints backend:** `/perfil/welcome/web-and-console-integrations`
 
-- **product / appconsole**: identifican un backoffice concreto. Ej.: `product=lv`, `appconsole=console`.
-- **appId**: identificador opaco del backoffice para el plano de sesión. Valor actual: `lv-console`
-  (mapea a `product=lv`, `appconsole=console`). Un backoffice nuevo usa su propio `appId`.
-- **rolePrefix**: `"{product}_{appconsole}_"` (guiones bajos). Ej.: `lv_console_`. Lo aplica/retira
-  el backend de forma transparente: el Product Owner ve/entra el `rolename` **sin** prefijo; en Evolok
-  el grupo vive **con** prefijo (`lv_console_editor`).
-- **permissions**: objeto de 3 dimensiones
-  ```
-  {
-    tabs:    { "<tabKey>":    "visible" | "hidden" },
-    actions: { "<actionKey>": "allowed" | "denied" },
-    fields:  { "<fieldKey>":  "editable" | "viewable" | "hidden" }
-  }
-  ```
-  Semántica de defaults (front): tabs = optimista-visible hasta cargar, luego estricto; actions =
-  default-deny; fields = default `editable`.
+## Modelo (importante)
 
-## Dos planos de seguridad
+- **Autenticación del operador y sus ROLES → DIRECTO contra Evolok, desde el JS** (reusando el IC web,
+  `evl-accounts.js`). NO pasa por nuestro backend. El JS recibe los grupos Evolok
+  (`{consoleId}-{ROL}`) y **oculta/quita el prefijo** → roles pelados (MAYÚSCULAS).
+- **Nuestro backend hace SOLO:**
+  1. **Admin de roles y privilegios** (definir/crear/editar/borrar roles + su mapa de privilegios + catálogo).
+  2. **Cargar el mapa de privilegios por rol(es)** (dado role(s) → `{tabs,actions,fields}` fusionado).
+  3. **Enforcement** de operaciones de consola (interceptor `@ConsolePrivilege`, ver abajo).
+  4. **Admin de consolas de la plataforma** (alta/baja/lista de consolas + config técnica del god).
+- **Auth del backend admin de roles/privilegios = apikey** (`X-Console-ApiKey`), **inyectada por el
+  proxy/BFF** de la consola (nunca en el navegador). El apikey resuelve `(product, appconsole, rolePrefix)`.
 
-| Plano | Base path | Auth | Quién lo usa |
-|---|---|---|---|
-| **Sesión** (verificación + editor in-console) | `/perfil/console/**` | Sesión operador: cookie `ev_gg_bo` o `?sessionId=<valor>` | El front de la consola (SDK) |
-| **Provisioning** (S2S) | `/perfil/console-admin/**` | Header `X-Console-ApiKey: <key>` (resuelve product/appconsole/rolePrefix) | Backends de producto / scripts de alta |
+`consoleId` = id del backoffice, derivado de `{product}-{appconsole}`. La consola MENTOR
+(godoservices-backoffice) es el producto GGOBO (id `welcome`) + appconsole `console` → `welcome-console`.
+`rolePrefix = "{consoleId}-"` (p.ej. `welcome-console-`); grupo Evolok = `welcome-console-EDITOR`. Flag
+`EvolokConfig.consoleMock` (default true): en dev, el apikey no se exige (producto por defecto) y el
+enforcement se omite.
 
-> El plano provisioning usa una base distinta a propósito, para no cruzarse con el interceptor de
-> sesión montado en `/perfil/console/**`.
+### Límites de longitud (Evolok)
 
----
+El grupo Evolok resultante es `{product}-{appconsole}-{ROLENAME}` (god: `{product}-{appconsole}-god`).
+No hay límite declarado en el código; el tope real lo impone el tenant Evolok. Se fija uno **conservador**
+(`ConsoleNaming`, web-core) y se derivan los sublímites — validado en backend (400) y en el front (UX):
 
-## Plano SESIÓN — `/perfil/console/**`
+| id | máx | charset |
+|----|-----|---------|
+| `product` | 15 | `[a-z0-9]` (sin `-`) |
+| `appconsole` (console) | 15 | `[a-z0-9]` (sin `-`) |
+| `rolename` | 32 | `[A-Za-z0-9_]` (→ MAYÚSCULAS) |
+| **grupo Evolok total** | **64** | `{product}-{appconsole}-{ROLENAME}` |
 
-### `GET /perfil/console/auth/me?app={appId}[&role={override}]`
-Resuelve el operador y sus permisos efectivos desde la sesión Evolok.
-`role` (override) es **solo DEV** para previsualizar permisos por rol; en prod lo ignora / lo resuelve
-el backend desde los grupos Evolok de la sesión.
-```jsonc
-// 200
-{
-  "operator": { "id": "…", "email": "…", "name": "…" },
-  "role":  "ADMIN",              // rol efectivo/primario (sin prefijo)
-  "roles": ["ADMIN"],            // todos los roles del operador (sin prefijo)
-  "permissions": { "tabs": {…}, "actions": {…}, "fields": {…} }  // ya fusionados
-}
-// 401 si no hay sesión válida
-```
+### Rol god (por consola)
 
-### `POST /perfil/console/auth/verify?app={appId}`
-Verifica una o varias operaciones para el operador de la sesión. Usado por backends que quieran
-confirmar antes de operar (y por el SDK para checks puntuales).
-```jsonc
-// body (una):   { "operation": "datos.delete" }
-// 200:          { "allowed": true }
-// body (batch): { "operations": ["datos.delete", "facturacion.rectify"] }
-// 200:          { "results": { "datos.delete": true, "facturacion.rectify": false } }
-```
+Cada consola tiene un administrador **god**: grupo Evolok `{consoleId}-god` → rol pelado **`GOD`**.
+- **Acceso TOTAL** garantizado (special-case del motor): siempre ve/puede todo — tabs, acciones, fields
+  y el admin de roles/privilegios — **sin depender del mapa** de privilegios.
+- Se le asigna un **email** (`godEmail`) en el alta de la consola.
+- Es un rol **RESERVADO**: una consola **no puede crearlo, editarlo ni borrarlo** (el backend rechaza
+  `POST/PUT/DELETE …/admin/roles/GOD` y `…/admin/privileges/GOD` con 400). No aparece en el editor.
 
-### `GET /perfil/console/auth/permissions?app={appId}`
-Catálogo + mapa actual, para el editor in-console (`/permisos`).
-```jsonc
-// 200
-{
-  "roles":   ["ADMIN", "MANAGER", …],   // sin prefijo
-  "tabs":    ["datos", "facturacion", …],
-  "actions": ["datos.delete", …],
-  "fields":  ["datos.personalData", …],
-  "permissions": { "ADMIN": { "tabs":{…}, "actions":{…}, "fields":{…} }, … }
-}
-```
+### Admin de integración
 
-### `PUT /perfil/console/auth/permissions?app={appId}&role={role}`
-Guarda el mapa de un rol desde el editor in-console. Gated por meta-privilegio `permisos.edit`.
-```jsonc
-// body: { "tabs": {…}, "actions": {…}, "fields": {…} }
-// 200
-```
+El **admin de integración** (quien da de alta/baja consolas) **no es un plano aparte con apikey**: es un
+**rol con la tab `integraciones` (y las acciones `integraciones.*`) permitida**. Se autoriza por el mismo
+enforcement (sesión Evolok del operador). Vive en la consola mentor (godoservices-backoffice).
 
 ---
 
-## Plano PROVISIONING — `/perfil/console-admin/**`  (header `X-Console-ApiKey`)
+## Backend — plano ADMIN `…/admin/**` (apikey)
 
-product/appconsole/rolePrefix se derivan del apikey; el cliente **no** los envía.
-
-### Roles (nombres SIN prefijo de cara al PO)
+### Roles (nombre SIN prefijo de cara al PO; el backend pone el grupo Evolok)
 ```
-GET    /perfil/console-admin/roles
-       -> { "roles": [ { "name":"editor", "prefixedName":"lv_console_editor", "description":"…" } ] }
-
-POST   /perfil/console-admin/roles          body: { "name":"editor", "description"?:"…" }
-       -> 201 { "name":"editor", "prefixedName":"lv_console_editor", "description":"…" }
-
-PUT    /perfil/console-admin/roles/{name}    body: { "description"?:"…" }
-       -> 200 { … }
-
-DELETE /perfil/console-admin/roles/{name}    -> 204
+GET    …/admin/roles                         -> { "roles": [ { "name":"EDITOR", "prefixedName":"welcome-console-EDITOR", "description":"…" } ] }
+POST   …/admin/roles     { "name", "description" }   -> 201 { name, prefixedName, description }   (description OBLIGATORIA → 400 si falta)
+PUT    …/admin/roles/{name}  { "description" }       -> 200                                       (description OBLIGATORIA)
+DELETE …/admin/roles/{name}                          -> 204
 ```
+> `GOD` es un rol **RESERVADO**: `POST/PUT/DELETE …/admin/roles/GOD` y `PUT/DELETE …/admin/privileges/GOD`
+> devuelven **400** (no creable/editable/borrable por la consola; el god siempre conserva acceso total).
 
-### Privilegios (mapa role→privilegios del producto)
+### Privilegios (mapa role→privilegios)
 ```
-GET    /perfil/console-admin/privileges
-       -> { "permissions": { "<role>": { "tabs":{…}, "actions":{…}, "fields":{…} } } }
-
-PUT    /perfil/console-admin/privileges/{role}   body: { "tabs":{…}, "actions":{…}, "fields":{…} }
-       -> 200
-
-DELETE /perfil/console-admin/privileges/{role}   -> 204
+GET    …/admin/privileges                    -> { "permissions": { "<role>": { tabs, actions, fields } } }
+PUT    …/admin/privileges/{role}   { tabs, actions, fields }   -> 200
+DELETE …/admin/privileges/{role}                               -> 204
 ```
 
-### Catálogo (universo de claves que el producto declara)
+### Catálogo (universo de claves de la consola)
 ```
-GET    /perfil/console-admin/catalog
-       -> { "roles":[…], "tabs":[…], "actions":[…], "fields":[…] }
+GET    …/admin/catalog   -> { roles, tabs, actions, fields }
+PUT    …/admin/catalog   { tabs, actions, fields }   -> 200
+```
+El catálogo define **qué tabs/acciones/datos** existen en la consola; es lo que pinta la vista de
+**Permisos** (y lo edita el god desde la vista de **Configuración**). Reglas:
+- **Sin duplicados** en tabs, acciones ni datos (dedup en backend).
+- **Tabs/acciones reservadas** siempre presentes y **no borrables**: tabs `permisos` + `configuracion`,
+  acciones `permisos.edit` + `configuracion.view`. Toda consola tiene SIEMPRE su vista de permisos
+  («accesos y permisos») y de configuración, aunque su catálogo esté vacío (el acceso a ellas se rige
+  igualmente por roles/privilegios, o el god que tiene acceso total).
+- Se guarda **en el mismo JSON** que el mapa de roles/privilegios de la consola
+  (`{ roles, tabs, actions, fields, permissions:{role→{tabs,actions,fields}} }`; hoy en memoria).
+- En la vista de Permisos las tres dimensiones se listan **por orden alfabético**, en **2 columnas**.
 
-PUT    /perfil/console-admin/catalog   body: { "tabs":[…], "actions":[…], "fields":[…] }
-       -> 200
+### Editor / carga de mapa (lo que consume la consola)
+```
+GET    …/admin/permissions                   -> { roles, tabs, actions, fields, permissions }   (payload del editor)
+GET    …/admin/privileges/resolve?roles=A,B  -> { "permissions": { tabs, actions, fields } }     (fusionado; roles vienen de Evolok)
 ```
 
-> `/console-admin/privileges` (S2S, apikey) y `/console/auth/permissions` (sesión, editor) escriben
-> el **mismo** store. Son dos rutas de acceso deliberadas al mismo dato.
+**permissions**: `{ tabs:{k:"visible"|"hidden"}, actions:{k:"allowed"|"denied"}, fields:{k:"editable"|"viewable"|"hidden"} }`.
+Defaults front: tabs optimista-visible hasta cargar; actions default-deny; fields default `editable`.
 
 ---
 
-## Notas de implementación (backend)
+## Backend — Enforcement de operaciones (no HTTP propio)
 
-- El apikey → `(product, appconsole, tenant, rolePrefix)` se resuelve de config
-  (`console.products.<apikey>` en `.properties`, o tabla equivalente).
-- `me`/`verify` resuelven los grupos del operador del cuerpo de `POST /console/api/auth/{sessionId}`
-  (hoy `EvolokUserServiceImpl.checkConsoleEvolokSessionStatus` devuelve solo el status → extender para
-  devolver el body con grupos), retiran el `rolePrefix` y resuelven privilegios del store.
-- El store (mapa role→privilegios + catálogo + roles) se persiste en PostgreSQL detrás de la interfaz
-  `ConsolePermissionsStore` (reemplaza `ConsolePermissionsRegistry` en memoria).
-- El alta/baja del grupo en Evolok va detrás del seam `ConsoleRoleProvider` (impl por-convenio de
-  entrada; impl Evolok real cuando se confirme la API de admin de grupos del tenant).
+Las operaciones de una consola (p.ej. bajo `/perfil/console/**` en welcome/console) se anotan con
+`@ConsolePrivilege("tab.action")`. El `ConsolePrivilegeInterceptor`:
+- resuelve los roles del operador **contra Evolok** (valida `ev_gg_bo`, saca grupos, quita prefijo) —
+  con caché LRU+TTL corto (`ConsoleRolesCache`, seam; default in-memory) para no llamar a Evolok en
+  cada operación;
+- comprueba la operación contra el mapa de privilegios;
+- MOCK → pasa; sin sesión válida → 401; no permitido → 403.
+
+> Este enforcement lo reusa cualquier consola (welcome/console y futuras) registrando el interceptor
+> en sus rutas. La consola de un producto separado puede, en su lugar, llamar a `…/admin/privileges/resolve`
+> y validar la sesión Evolok por su cuenta.
+
+---
+
+## Backend — plano CONSOLAS `…/consoles/**` (admin de integración + config del god)
+
+Admin de las consolas de la plataforma (consola mentor). **Autorización = enforcement por privilegio**
+(sesión Evolok, NO apikey); el operador pasa `?app={consoleId}` = la consola desde la que opera.
+
+```
+GET    …/consoles              (integraciones.view)   -> { "consoles": [ { consoleId, product, appconsole, godEmail, godRole, godGroup, hasApiKey, apiKeyMasked } ] }
+POST   …/consoles              (integraciones.create) { product, console, godEmail }
+                                                       -> 201 { consoleId, product, appconsole, godEmail, godRole, godGroup, apiKey }   (apiKey EN CLARO, UNA vez)
+PUT    …/consoles/{consoleId}  (integraciones.edit)   { product, console, godEmail, apiKey? }
+                                                       -> 200 { …masked }   (el god edita todos los campos; apiKey vacío = conservar; cambiar product/console = rename)
+DELETE …/consoles/{consoleId}  (integraciones.delete) -> 204
+GET    …/consoles/mine?app=    (configuracion.view)   -> { consoleId, product, appconsole, rolePrefix, godRole, godGroup, godEmail, apiKey }   (config técnica; apiKey EN CLARO)
+```
+
+- **Alta**: `consoleId = {product}-{console}`; se **genera** la apikey y se asocia `godEmail` (los tres
+  campos son **obligatorios** → 400 si faltan; consola duplicada → 409). La apikey se devuelve **una sola
+  vez**; en la lista va **enmascarada** (`apiKeyMasked`, `hasApiKey`).
+- **Config técnica del god** (`/consoles/mine`): identificadores + apikey **en claro** de la propia
+  consola, para que el god configure el proxy de su producto. La ve el god (rol `GOD`, acceso total) o
+  quien tenga `configuracion.view`.
+- **Persistencia**: **en memoria; NO hay DB**. El registry de consolas (`ConsoleRegistry`) se **siembra**
+  de la propiedad `console.products` (`.properties`: `consoleId:product:appconsole:apiKey:godEmail;…`) o de
+  un default (`welcome-console`); el catálogo + mapa de roles/privilegios (`ConsolePermissionsRegistry`) se
+  siembra desde código (`ConsolePermissionsCatalog`). Las mutaciones (crear/editar consola, catálogo,
+  privilegios) viven solo en memoria → se pierden al reiniciar. TODO: PostgreSQL detrás de la misma firma.
+
+## Cliente (SDK React `console-sdk`)
+
+```js
+const sdk = createConsole({ consoleId: 'welcome-console', getEvolokSession });   // getEvolokSession = IC web
+const { operator, roles } = await sdk.auth.getOperator();      // Evolok directo; prefijo ya quitado
+const permissions = await sdk.privileges.resolve(roles);       // mapa fusionado (backend)
+sdk.verify.actionAllowed(permissions, 'datos.delete');         // puro, sobre el snapshot
+// admin de roles/privilegios + catálogo (apikey vía proxy):
+await sdk.admin.roles.create('editor', 'Editor de contenidos');
+await sdk.admin.savePermissions('EDITOR', { tabs, actions, fields });
+const catalog = await sdk.admin.catalog.get();                 // { roles, tabs, actions, fields }
+await sdk.admin.catalog.set({ tabs, actions, fields });        // define el catálogo (sin dups; reservadas fijas)
+// admin de consolas de la plataforma + config técnica del god (enforcement por sesión):
+const list = await sdk.consoles.list();
+const created = await sdk.consoles.create('running', 'console', 'god@grupogodo.com'); // created.apiKey (una vez)
+await sdk.consoles.update('running-console', { product, console, godEmail, apiKey }); // god edita todo
+await sdk.consoles.remove('running-console');
+const myConfig = await sdk.consoles.mine();    // { consoleId, rolePrefix, godGroup, apiKey, … }
+```
+
+## Backend — clases (web-core `…webandconsoleintegrations`)
+
+- `controller/ConsoleProvisioningController` — plano `…/admin/**` (roles/privilegios/catálogo; protege `GOD` reservado).
+- `controller/IntegrationConsolesController` — plano `…/consoles/**` (alta/baja/lista de consolas + `/mine` config del god).
+- `auth/ConsoleApiKeyControl` + `ConsoleApiKeyInterceptor` — apikey (plano `…/admin/**`).
+- `auth/ConsolePrivilege` + `ConsolePrivilegeInterceptor` — enforcement (planos `/perfil/console/**` y `…/consoles/**`).
+- `service/ConsoleOperatorResolver` — roles desde Evolok (con `ConsoleRolesCache`).
+- `service/ConsoleRolesCache` (seam) + `impl/InMemoryConsoleRolesCache` + `ConsoleRolesCacheConfig` (@ConditionalOnMissingBean).
+- `service/ConsoleRegistry` — CRUD de consolas (consoleId/apiKey→producto, `godEmail`, `create`/`remove`/`list`, `GOD_ROLE`).
+- `service/ConsoleRoleProvider` + `impl/NamingConsoleRoleProvider` (por convenio de nombre).
+- `privileges/ConsolePermissionsRegistry` (motor; `GOD` = acceso total special-case + reservado; LV se registra vía `WelcomeConsolePermissionsSeed`).
+- Store en memoria (TODO: PostgreSQL). Provisioning del grupo en Evolok = seam `ConsoleRoleProvider` (TODO impl real).

@@ -1,6 +1,29 @@
 import { createTheme } from '@mui/material/styles';
 import { BRANDS, Brand } from './brand';
 
+// Estilo "relleno" para botones outlined/text: fondo = color.main, texto = contrastText (invierte el
+// outlined clásico), hover a color.dark, y estado disabled estándar. Resuelve el color del ownerState
+// (primary por defecto; secondary/error/warning/success/info si se indica).
+function filledButton(theme, ownerState) {
+  const key =
+    ownerState?.color && ownerState.color !== 'inherit' ? ownerState.color : 'primary';
+  const pal = theme.palette[key] || theme.palette.primary;
+  return {
+    backgroundColor: pal.main,
+    color: pal.contrastText,
+    border: '1px solid ' + pal.main,
+    '&:hover': {
+      backgroundColor: pal.dark || pal.main,
+      borderColor: pal.dark || pal.main,
+    },
+    '&.Mui-disabled': {
+      backgroundColor: theme.palette.action.disabledBackground,
+      color: theme.palette.action.disabled,
+      borderColor: theme.palette.action.disabledBackground,
+    },
+  };
+}
+
 // Builds the MUI theme for a given brand. Neutrals, typography, shape and the
 // component layout are shared across brands; only the accent (secondary), the
 // yellow `brandDetail` highlight, and the accent-driven focus/active states
@@ -82,6 +105,11 @@ export function buildTheme(brandKey = Brand.Godo) {
             backgroundColor: '#111111',
             '&:hover': { backgroundColor: '#000000' },
           },
+          // Todos los botones llevan FONDO: las variantes outlined y text se pintan rellenas
+          // (fondo = color, texto = contraste; invierte el outlined clásico). Aplica a cualquier
+          // `color` (primary/secondary/error/…). Los IconButton y los Chip no se ven afectados.
+          outlined: ({ theme, ownerState }) => filledButton(theme, ownerState),
+          text: ({ theme, ownerState }) => filledButton(theme, ownerState),
         },
       },
       MuiPaper: {

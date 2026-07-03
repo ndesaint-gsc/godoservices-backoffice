@@ -1,7 +1,7 @@
 // console-sdk/verify.js
 // Verificación de permisos — funciones PURAS sobre un snapshot de permisos (sin React, sin redux).
 // El snapshot tiene la forma { tabs:{key:'visible'|'hidden'}, actions:{key:'allowed'|'denied'},
-// fields:{key:'editable'|'viewable'|'hidden'} } tal como lo devuelve GET /perfil/console/auth/me.
+// fields:{key:'editable'|'viewable'|'hidden'} } tal como lo devuelve el endpoint …/auth/me.
 
 // Tab visible. Mientras los permisos no han cargado (null) → optimista (visible) para no parpadear el
 // nav; una vez cargados, solo visible si la clave es exactamente 'visible' (app/rol desconocido

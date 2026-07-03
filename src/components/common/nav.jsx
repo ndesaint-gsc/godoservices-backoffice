@@ -22,6 +22,8 @@ import Notifications from '@mui/icons-material/Notifications';
 import Receipt from '@mui/icons-material/Receipt';
 import Build from '@mui/icons-material/Build';
 import Security from '@mui/icons-material/Security';
+import Hub from '@mui/icons-material/Hub';
+import Settings from '@mui/icons-material/Settings';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import { NAV_ITEMS } from '@/common/router/nav.config';
@@ -32,7 +34,7 @@ import { useBrandConfig } from '@/common/theme/useBrand';
 
 const DRAWER_WIDTH = 240;
 
-const ICONS = { Home, Person, Subscriptions, Notifications, Receipt, Build, Security };
+const ICONS = { Home, Person, Subscriptions, Notifications, Receipt, Build, Security, Hub, Settings };
 
 const itemSx = {
   mx: 1.25,

@@ -1,9 +1,10 @@
-// Delegación fina al console-sdk. Mantiene la firma para no tocar authSlice.
+// Operador + permisos, vía console-sdk.
+// - getOperator: identidad + roles del operador desde Evolok (directo). roleOverride solo DEV.
+// - resolvePermissions: mapa de privilegios fusionado para esos roles (backend …/admin/privileges/resolve).
 import sdk from '@/services/console';
 
-// GET /perfil/console/auth/me -> { operator, role, roles, permissions }
-// `app` se ignora (el sdk ya lo tiene); `roleOverride` solo DEV.
-const getMe = (app, roleOverride) => sdk.auth.getMe(roleOverride);
+const getOperator = (roleOverride) => sdk.auth.getOperator(roleOverride);
+const resolvePermissions = (roles) => sdk.privileges.resolve(roles);
 
-const operatorService = { getMe };
+const operatorService = { getOperator, resolvePermissions };
 export default operatorService;

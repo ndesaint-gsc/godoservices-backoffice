@@ -67,4 +67,20 @@ export const NAV_ITEMS = [
     requiresCustomer: false,
     placement: 'bottom', // editor de permisos (meta); visible solo ADMIN vía tab 'permisos' del backend
   },
+  {
+    path: '/configuracion',
+    label: 'Configuración',
+    icon: 'Settings',
+    tabKey: 'configuracion',
+    requiresCustomer: false,
+    placement: 'bottom', // config técnica de la propia consola; visible vía tab 'configuracion' (god)
+  },
+  {
+    path: '/integraciones',
+    label: 'Integraciones',
+    icon: 'Hub',
+    tabKey: 'integraciones',
+    requiresCustomer: false,
+    placement: 'bottom', // admin de consolas de la plataforma (última); visible vía tab 'integraciones' (admin/god)
+  },
 ];

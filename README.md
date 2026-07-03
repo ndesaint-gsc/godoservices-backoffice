@@ -1,6 +1,8 @@
 # web-backoffice-static
 
-Consola de operador (backoffice) del grupo Godó en React. Reemplaza progresivamente la consola legada server-rendered (Groovy) y consume la API REST bajo `/perfil/console/**`. Un operador busca un usuario y gestiona sus datos, suscripciones, notificaciones y facturación, además de herramientas globales.
+Consola de operador (backoffice) del grupo Godó en React. Es la **consola MENTOR/plantilla** del framework de integración *web-and-console-integrations*: `consoleId = welcome-console` (producto **GGOBO**, id `welcome`, + appconsole `console`). De ella derivan las demás consolas de producto. Un operador busca un usuario y gestiona sus datos, suscripciones, notificaciones y facturación, además de herramientas globales, la administración de consolas de la plataforma y la configuración/permisos de la propia consola.
+
+> El contrato del framework (fuente de verdad) está en [`src/console-sdk/CONTRACT.md`](src/console-sdk/CONTRACT.md); el SDK independiente en [`src/console-sdk/`](src/console-sdk/README.md).
 
 ## Stack
 
@@ -35,11 +37,15 @@ npm run format
 
 ## Backend / API
 
-Todo cuelga de **`/perfil/console`** (el proxy de Vite reenvía `/perfil/*` al backend):
-- **web-lv** (`ConsoleUserController`/`ConsoleViewController`/`ConsoleInvoiceController`): `…/user/**`, `…/views/**`, `…/invoices/**`.
-- **web-core** (`ConsoleAuthController`/`ConsoleConfigurationController`/`ConsoleAdminController`): `…/auth/**`, `…/configuration/**`, y endpoints admin.
+El proxy de Vite reenvía `/perfil/*` al backend. Dos familias:
+- **Operación de la consola** bajo `/perfil/console/**` (web-lv: `…/user/**`, `…/views/**`, `…/invoices/**`; web-core: config, retención, etc.).
+- **Framework de integración** bajo `/perfil/welcome/web-and-console-integrations/**` (web-core, paquete `com.grupogodo.welcome.webandconsoleintegrations`):
+  - `…/admin/**` (apikey `X-Console-ApiKey` vía proxy): roles, privilegios y **catálogo** (tabs/acciones/datos) de la consola.
+  - `…/consoles/**` (enforcement por sesión Evolok): alta/baja/edición de **consolas** de la plataforma + `/mine` (config técnica del god).
 
-> Los endpoints de **web-core** requieren recompilar web-core en local; si no, dan **404** (`/auth/me`, `/auth/permissions`, retención, etc.).
+**Persistencia = EN MEMORIA (no hay DB todavía).** El registry de consolas (`ConsoleRegistry`) se **siembra** de la propiedad `console.products` (`.properties`) o de un default (`welcome-console`); el catálogo + mapa de roles/privilegios (`ConsolePermissionsRegistry`) se siembra desde código (`ConsolePermissionsCatalog`). Las mutaciones (crear consola/rol, editar catálogo/privilegios) viven solo en memoria → se pierden al reiniciar. PostgreSQL detrás de la misma firma es el pendiente principal.
+
+> Los endpoints de **web-core** requieren recompilar web-core en local (JDK 8, Eclipse); si no, dan **404**.
 
 ## Funcionalidades
 
@@ -48,36 +54,43 @@ Todo cuelga de **`/perfil/console`** (el proxy de Vite reenvía `/perfil/*` al b
 - **Notificaciones** — opt-ins + newsletters/intereses.
 - **Facturación** — listar/PDF, sustitutiva/rectificativa/abono, recalcular, dirección fiscal.
 - **Herramientas** (global, sin cliente) — crear usuario, NIF masivo, roles masivo, landings, retención, buscar por externalId.
-- **Permisos** (`/permisos`, solo ADMIN) — editor de la matriz rol→permisos.
+- **Permisos** (`/permisos`) — editor de la matriz rol→permisos de la consola. Lista tabs/acciones/datos **desde el JSON del backend** (catálogo), en orden alfabético y a 2 columnas.
+- **Configuración** (`/configuracion`) — config técnica de la propia consola (identificadores + apikey del god) **y editor del catálogo** (tabs/acciones/datos que aparecen en Permisos). `permisos` y `configuracion` son tabs reservadas (siempre presentes, no borrables); sin duplicados.
+- **Integraciones** (`/integraciones`, última del nav) — admin de las **consolas de la plataforma**: alta/baja/edición (todos los campos, con generador de apikey). Cada consola tiene un god (rol `GOD`, acceso total) con email.
 
 ## Auth, roles y permisos
 
-- **Auth + rol del operador → delegados a un IdP** (Evolok hoy / `Director`-LDAP empresarial a futuro; **decisión abierta**), detrás de un seam. **Actualmente MOCKEADO**: `GET /perfil/console/auth/me` no exige sesión y devuelve un operador fijo + rol por defecto `ADMIN` (override dev `?role=`).
-- **Permisos por rol → definidos en la app** (no en el IdP), en 3 dimensiones: `tabs` (visible/hidden), `actions` (allowed/denied), `fields` (editable/viewable/hidden). Catálogo **por aplicación** (`appId='lv-console'`), pensado para reutilizarse en otros backoffices SaaS.
-- El front consume `/auth/me` (`authSlice.loadPermissions`) y gobierna la UI con `useTabVisible` / `useActionAllowed` / `useFieldMode` (`src/common/permissions/permissions.js`). Default-deny en acciones.
-- **Roles**: ADMIN, MANAGER, FINANCE_EDITOR, FINANCE_VIEWER, VIEWER. En DEV, el *role switcher* de la topbar previsualiza los permisos de cada rol.
-- **Editor**: `views/permisos` edita la matriz (PUT `/perfil/console/auth/permissions`); persistencia **en memoria** por ahora.
-- La matriz vacía para que Business defina roles×permisos está en **`docs/permissions-matrix.{md,csv}`**.
+Modelo del framework (ver `console-sdk/CONTRACT.md`):
+- **Auth del operador + sus ROLES → DIRECTO contra Evolok desde el JS** (reusando el IC web; la app aporta `getEvolokSession`). El SDK recibe los grupos `{consoleId}-{ROL}` y **quita el prefijo** → roles pelados. En DEV hay un **mock** (`services/console.js` → `getEvolokSession`) que respeta el *role switcher*; TODO: cablear el IC real.
+- **El backend hace solo**: (1) admin de roles/privilegios + **catálogo**; (2) cargar el mapa de privilegios por rol(es); (3) **enforcement** de operaciones (`@ConsolePrivilege`, valida `ev_gg_bo` contra Evolok con caché). Flag `EvolokConfig.consoleMock` (default true): en dev, apikey no exigida y enforcement omitido.
+- **Permisos por rol** en 3 dimensiones: `tabs` (visible/hidden), `actions` (allowed/denied), `fields` (editable/viewable/hidden). El **catálogo** (universo de claves) lo define cada consola y se edita desde **Configuración**; se guarda en el mismo JSON que el mapa rol→privilegios.
+- **`appId = welcome-console`** (`src/common/permissions/permissions.js`). El front resuelve permisos (`authSlice.loadPermissions` → `auth.getOperator` + `privileges.resolve`) y gobierna la UI con `useTabVisible` / `useActionAllowed` / `useFieldMode`. Default-deny en acciones.
+- **Rol `GOD`** (grupo Evolok `{consoleId}-god`): acceso TOTAL y **reservado** (no creable/editable/borrable). Roles de negocio: ADMIN, MANAGER, FINANCE_EDITOR, FINANCE_VIEWER, VIEWER (+ los que defina cada consola). En DEV, el *role switcher* de la topbar previsualiza cada rol.
+- **Límites de longitud** (Evolok): product ≤15, console ≤15 (`[a-z0-9]`), rolename ≤32 (`[A-Za-z0-9_]`), grupo total ≤64.
 
-Pendiente (futuro): IdP real tras el seam, enforcement por permiso en backend, persistencia real del registry.
+**Persistencia: EN MEMORIA** (registry de consolas, catálogo, roles y privilegios). No hay DB. Pendiente: PostgreSQL detrás de la firma, provider Evolok real del seam de roles, y cablear el IC web real en el SDK.
 
 ## Layout
 
 ```
 src/
-  views/<feature>/index.jsx          páginas (datos, suscripciones/*, notificaciones, facturacion, herramientas/*, permisos)
+  console-sdk/                       SDK independiente del framework (sin redux/MUI): client, auth (Evolok),
+                                     admin (roles/privilegios/catálogo), consoles (alta/edición/config god),
+                                     verify, keys, react/ (provider+hooks). CONTRACT.md = fuente de verdad.
+  views/<feature>/index.jsx          páginas (datos, suscripciones/*, notificaciones, facturacion,
+                                     herramientas/*, permisos, configuracion, integraciones)
   components/<feature>/              tablas/diálogos/forms por área + components/common (nav, topbar, main, modal)
-  services/                          http.js + <entity>.service.js (operator, permissionsAdmin, datos, billing, subscriptions, …)
+  services/                          http.js + <entity>.service.js (operator, permissionsAdmin, integrations, …)
   config/endpoints.json
   common/
     features/auth/authSlice.js           operador, rol y permisos (loadPermissions)
     features/customer/customerSlice.js   usuario cargado
-    permissions/permissions.js           APP_ID + useTabVisible/useActionAllowed/useFieldMode
+    permissions/permissions.js           APP_ID='welcome-console' + useTabVisible/useActionAllowed/useFieldMode (reexport del SDK)
     permissions/ (privileges.js, useHasPrivilege)   gating legacy (shim)
     providers/ModalProvider/
     router/                          Routes + AuthenticatedRoute + UnauthenticatedRoute + nav.config (tabKey/placement)
     store/store.js                   RTK store + redux-persist
-    theme/                           tema multi-marca (LV/MD/R1)
+    theme/                           tema multi-marca (LV/MD/R1); botones outlined/text con fondo (invertidos)
 ```
 
 Path alias: `@/` → `src/`.

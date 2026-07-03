@@ -12,10 +12,12 @@ import {
   Select,
   Stack,
   Switch,
+  TextField,
   Typography,
 } from '@mui/material';
 import { useSnackbar } from 'notistack';
 import { APP_ID, useActionAllowed } from '@/common/permissions/permissions';
+import { Naming } from '@/console-sdk';
 import permissionsAdminService from '@/services/permissionsAdmin.service';
 
 const FIELD_MODES = ['editable', 'viewable', 'hidden'];
@@ -35,19 +37,33 @@ const Permisos = () => {
   const canEdit = useActionAllowed('permisos.edit');
 
   const [catalog, setCatalog] = useState(null); // { roles, tabs, actions, fields, permissions }
+  const [rolesMeta, setRolesMeta] = useState({}); // name -> { prefixedName, description }
   const [role, setRole] = useState('');
   const [draft, setDraft] = useState(null); // { tabs, actions, fields } del rol seleccionado
+  const [roleDesc, setRoleDesc] = useState(''); // descripción editable del rol seleccionado
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [newRole, setNewRole] = useState(''); // rolename pelado (el backend le pone el prefijo Evolok)
+  const [newRoleDesc, setNewRoleDesc] = useState(''); // descripción obligatoria del nuevo rol
 
   const load = async (keepRole) => {
     setLoading(true);
     try {
-      const data = await permissionsAdminService.getAll(APP_ID);
+      const [data, roles] = await Promise.all([
+        permissionsAdminService.getAll(APP_ID),
+        permissionsAdminService.listRoles(),
+      ]);
+      // Solo rolename pelado + descripción; el prefijo Evolok ({product}-{console}-) se oculta en JS.
+      const meta = {};
+      (roles || []).forEach((r) => {
+        meta[r.name] = { description: r.description || '' };
+      });
       const selected = keepRole || data.roles?.[0] || '';
       setCatalog(data);
+      setRolesMeta(meta);
       setRole(selected);
       setDraft(cloneRolePerms(data, selected));
+      setRoleDesc(meta[selected]?.description || '');
     } catch (error) {
       enqueueSnackbar('Error al cargar permisos: ' + (error?.message || ''), { variant: 'error' });
     } finally {
@@ -60,9 +76,10 @@ const Permisos = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const onRoleChange = (newRole) => {
-    setRole(newRole);
-    setDraft(cloneRolePerms(catalog, newRole));
+  const onRoleChange = (newSelected) => {
+    setRole(newSelected);
+    setDraft(cloneRolePerms(catalog, newSelected));
+    setRoleDesc(rolesMeta[newSelected]?.description || '');
   };
 
   const setTab = (key, visible) =>
@@ -80,6 +97,54 @@ const Permisos = () => {
       await load(role);
     } catch (error) {
       enqueueSnackbar('Error al guardar: ' + (error?.message || ''), { variant: 'error' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onCreateRole = async () => {
+    const name = newRole.trim();
+    const description = newRoleDesc.trim();
+    if (!name || !description) return; // descripción obligatoria
+    setSaving(true);
+    try {
+      const created = await permissionsAdminService.createRole(name, description);
+      enqueueSnackbar(`Rol creado: ${created?.name}`, { variant: 'success' });
+      setNewRole('');
+      setNewRoleDesc('');
+      await load(created?.name);
+    } catch (error) {
+      enqueueSnackbar('Error al crear rol: ' + (error?.message || ''), { variant: 'error' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onSaveDesc = async () => {
+    const description = roleDesc.trim();
+    if (!description) return; // descripción obligatoria
+    setSaving(true);
+    try {
+      await permissionsAdminService.updateRole(role, description);
+      enqueueSnackbar('Descripción actualizada', { variant: 'success' });
+      await load(role);
+    } catch (error) {
+      enqueueSnackbar('Error al actualizar descripción: ' + (error?.message || ''), { variant: 'error' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onDeleteRole = async () => {
+    if (!role) return;
+    if (!window.confirm(`¿Borrar el rol ${role}? Se eliminan también sus privilegios.`)) return;
+    setSaving(true);
+    try {
+      await permissionsAdminService.deleteRole(role);
+      enqueueSnackbar(`Rol borrado: ${role}`, { variant: 'success' });
+      await load();
+    } catch (error) {
+      enqueueSnackbar('Error al borrar rol: ' + (error?.message || ''), { variant: 'error' });
     } finally {
       setSaving(false);
     }
@@ -128,10 +193,74 @@ const Permisos = () => {
 
       <Paper variant="outlined" sx={{ p: { xs: 3, md: 4 } }}>
         <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+          Gestión de roles
+        </Typography>
+
+        {/* Alta de rol: nombre pelado + descripción (obligatoria). El backend crea el grupo Evolok
+            {consoleId}-{ROL}. */}
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} sx={{ alignItems: 'flex-start' }}>
+          <TextField
+            size="small"
+            label="Nuevo rol"
+            value={newRole}
+            onChange={(event) => setNewRole(event.target.value)}
+            disabled={!canEdit || saving}
+            inputProps={{ maxLength: Naming.MAX_ROLENAME }}
+            helperText={`Máx. ${Naming.MAX_ROLENAME}`}
+            sx={{ minWidth: 180 }}
+          />
+          <TextField
+            size="small"
+            label="Descripción (obligatoria)"
+            value={newRoleDesc}
+            onChange={(event) => setNewRoleDesc(event.target.value)}
+            disabled={!canEdit || saving}
+            required
+            fullWidth
+          />
+          <Button
+            variant="contained"
+            onClick={onCreateRole}
+            disabled={!canEdit || saving || !newRole.trim() || !newRoleDesc.trim()}
+          >
+            Añadir rol
+          </Button>
+        </Stack>
+
+        <Divider sx={{ my: 2 }} />
+
+        {/* Descripción del rol seleccionado (editable, obligatoria) + baja. */}
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} sx={{ alignItems: 'flex-start' }}>
+          <TextField
+            size="small"
+            label={`Descripción de ${role}`}
+            value={roleDesc}
+            onChange={(event) => setRoleDesc(event.target.value)}
+            disabled={!canEdit || saving}
+            required
+            error={canEdit && !roleDesc.trim()}
+            helperText={canEdit && !roleDesc.trim() ? 'La descripción es obligatoria' : ' '}
+            fullWidth
+          />
+          <Button
+            variant="outlined"
+            onClick={onSaveDesc}
+            disabled={!canEdit || saving || !roleDesc.trim()}
+          >
+            Guardar descripción
+          </Button>
+          <Button color="error" variant="outlined" onClick={onDeleteRole} disabled={!canEdit || saving}>
+            Borrar rol
+          </Button>
+        </Stack>
+      </Paper>
+
+      <Paper variant="outlined" sx={{ p: { xs: 3, md: 4 } }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
           Tabs (visible / oculto)
         </Typography>
-        <Stack>
-          {catalog.tabs.map((key) => (
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
+          {[...catalog.tabs].sort((a, b) => a.localeCompare(b)).map((key) => (
             <FormControlLabel
               key={key}
               control={
@@ -146,7 +275,7 @@ const Permisos = () => {
               label={key}
             />
           ))}
-        </Stack>
+        </Box>
       </Paper>
 
       <Paper variant="outlined" sx={{ p: { xs: 3, md: 4 } }}>
@@ -154,7 +283,7 @@ const Permisos = () => {
           Acciones (permitida / denegada)
         </Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
-          {catalog.actions.map((key) => (
+          {[...catalog.actions].sort((a, b) => a.localeCompare(b)).map((key) => (
             <FormControlLabel
               key={key}
               control={
@@ -181,8 +310,8 @@ const Permisos = () => {
             Sin datos configurables.
           </Typography>
         ) : (
-          <Stack spacing={1.5}>
-            {catalog.fields.map((key) => (
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 1.5 }}>
+            {[...catalog.fields].sort((a, b) => a.localeCompare(b)).map((key) => (
               <Box
                 key={key}
                 sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}
@@ -203,7 +332,7 @@ const Permisos = () => {
                 </FormControl>
               </Box>
             ))}
-          </Stack>
+          </Box>
         )}
 
         <Divider sx={{ my: 2 }} />

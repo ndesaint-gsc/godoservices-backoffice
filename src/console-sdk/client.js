@@ -1,10 +1,12 @@
 // console-sdk/client.js
-// Cliente HTTP self-contained del console-sdk. NO depende de la app (ni redux, ni MUI, ni de
-// services/http.js). Dos modos de auth:
-//   - 'session' (por defecto): la sesión de operador viaja por la cookie `ev_gg_bo`; si se pasa
-//     `getSessionId`, además se añade `?sessionId=<valor>` (útil con el proxy Vite en DEV).
-//   - 'apikey': provisioning S2S; añade la cabecera `X-Console-ApiKey`.
-// Ver CONTRACT.md para los paths y payloads.
+// Cliente HTTP self-contained del console-sdk (sin redux/MUI). Habla SOLO con el backend del framework
+// (admin de roles/privilegios + carga del mapa por rol) bajo /perfil/welcome/web-and-console-integrations/admin.
+//
+// Auth del plano admin = apikey (X-Console-ApiKey). En la consola en navegador NO se pone la key: la
+// inyecta el proxy/BFF server-side (como el sessionId hoy). Consumidores S2S (Node/script) pueden pasar
+// `apiKey` y el cliente la envía en la cabecera.
+//
+// La AUTENTICACIÓN del operador y sus ROLES NO pasan por aquí: van directas contra Evolok (ver auth.js).
 
 export class ConsoleError extends Error {
   constructor(message, status) {
@@ -22,19 +24,15 @@ const buildQuery = (params) => {
 
 /**
  * @param {object} config
- * @param {string} [config.baseUrl='']   Prefijo de las URLs (vacío = relativo, resuelto por el proxy).
- * @param {string} [config.appId]        appId del backoffice (p.ej. 'lv-console') para el plano sesión.
- * @param {string} [config.apiKey]       Si se pasa → modo provisioning (cabecera X-Console-ApiKey).
- * @param {() => (string|undefined)} [config.getSessionId] Devuelve el sessionId a inyectar como query.
- * @param {() => void} [config.onUnauthorized] Callback en respuesta 401.
+ * @param {string} [config.baseUrl='']       Prefijo de URLs (vacío = relativo, resuelto por el proxy).
+ * @param {string} [config.apiKey]           Cabecera X-Console-ApiKey (solo S2S; en navegador la pone el proxy).
+ * @param {() => void} [config.onUnauthorized] Callback en 401.
  */
 export function createConsoleClient(config = {}) {
-  const { baseUrl = '', appId, apiKey, getSessionId, onUnauthorized } = config;
+  const { baseUrl = '', apiKey, onUnauthorized } = config;
 
   const request = async (method, path, { body, params } = {}) => {
-    const sessionId = typeof getSessionId === 'function' ? getSessionId() : undefined;
-    const query = buildQuery({ ...(params || {}), ...(sessionId ? { sessionId } : {}) });
-
+    const query = buildQuery(params);
     const headers = { Accept: 'application/json' };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     if (apiKey) headers['X-Console-ApiKey'] = apiKey;
@@ -56,7 +54,6 @@ export function createConsoleClient(config = {}) {
     }
     if (res.status === 204) return null;
 
-    // Los endpoints de mutación suelen devolver 200 con body vacío: no llamar json() a ciegas.
     const text = await res.text();
     if (!text) return null;
     const contentType = res.headers.get('content-type') || '';
@@ -71,8 +68,6 @@ export function createConsoleClient(config = {}) {
   };
 
   return {
-    appId,
-    mode: apiKey ? 'apikey' : 'session',
     get: (path, opts) => request('GET', path, opts),
     post: (path, body, opts) => request('POST', path, { ...opts, body }),
     put: (path, body, opts) => request('PUT', path, { ...opts, body }),

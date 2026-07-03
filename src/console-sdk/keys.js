@@ -21,8 +21,27 @@ export const Tab = {
   FACTURACION: 'facturacion',
   HERRAMIENTAS: 'herramientas',
   PERMISOS: 'permisos',
+  // Meta-tabs de la consola mentor: admin de consolas y config técnica (identificadores + apikey).
+  INTEGRACIONES: 'integraciones',
+  CONFIGURACION: 'configuracion',
 };
 export const ALL_TABS = Object.values(Tab);
+
+// Tabs/acciones META RESERVADAS: toda consola tiene siempre su vista de permisos y de configuración;
+// no se pueden borrar del catálogo (el backend las reañade). Espejo de ConsolePermissionsRegistry.
+export const RESERVED_TABS = ['permisos', 'configuracion'];
+export const RESERVED_ACTIONS = ['permisos.edit', 'configuracion.view'];
+
+// --- Límites de longitud (espejo de web-core ConsoleNaming; el grupo Evolok {product}-{console}-{ROL}
+// no debe exceder MAX_GROUP). El backend es el autoritativo; esto es solo UX (maxLength/validación). ---
+export const Naming = {
+  MAX_PRODUCT: 15,
+  MAX_CONSOLE: 15,
+  MAX_ROLENAME: 32,
+  MAX_GROUP: 64,
+  ID_RE: /^[a-z0-9]+$/, // product/console: minúsculas + dígitos, sin '-'
+  ROLENAME_RE: /^[A-Za-z0-9_]+$/,
+};
 
 // --- Modelo legacy de privilegios (routing/nav) ---
 // La autoridad de tabs/actions/fields es el snapshot de permisos (verify.js). Este modelo estático

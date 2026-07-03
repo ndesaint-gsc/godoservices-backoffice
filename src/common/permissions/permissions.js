@@ -3,9 +3,10 @@
 // <ConsoleProvider> en App.jsx desde redux.
 export { useTabVisible, useActionAllowed, useFieldMode } from '@/console-sdk/react';
 
-// appId de esta consola en el backend (GET /perfil/console/auth/me?app=). Otro backoffice usaría su
-// propio APP_ID contra el mismo motor/endpoint.
-export const APP_ID = 'lv-console';
+// appId de esta consola (la MENTOR): producto GGOBO (grupogodo business object, id `welcome`) +
+// appconsole `console` → consoleId `welcome-console`. Es el `?app=` contra el backend y el prefijo de
+// grupo Evolok (`welcome-console-{ROL}`). Otro backoffice usaría su propio APP_ID contra el mismo motor.
+export const APP_ID = 'welcome-console';
 
 // Selectores redux (usados por el bridge que alimenta el ConsoleProvider).
 export const selectPermissions = (state) => state.auth.permissions;
