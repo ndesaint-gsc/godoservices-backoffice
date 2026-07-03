@@ -103,10 +103,26 @@ El catálogo define **qué tabs/acciones/datos** existen en la consola; es lo qu
   (`{ roles, tabs, actions, fields, permissions:{role→{tabs,actions,fields}} }`; hoy en memoria).
 - En la vista de Permisos las tres dimensiones se listan **por orden alfabético**, en **2 columnas**.
 
-### Editor / carga de mapa (lo que consume la consola)
+### Editor de permisos (payload del editor; plano admin)
 ```
 GET    …/admin/permissions                   -> { roles, tabs, actions, fields, permissions }   (payload del editor)
-GET    …/admin/privileges/resolve?roles=A,B  -> { "permissions": { tabs, actions, fields } }     (fusionado; roles vienen de Evolok)
+```
+
+> La **carga del mapa por rol para CONSUMO** (`privileges/resolve`) NO está aquí: vive en el plano
+> CLIENT (`…/client/**`, ver abajo), para separar al consumidor de la administración.
+
+---
+
+## Backend — plano CLIENT `…/client/**` (apikey) — CONSUMO
+
+Lo que consume una consola de un tercero (el **edge-console-sdk**): dado el conjunto de roles del
+operador (que el JS obtiene DIRECTO de Evolok y pasa ya sin prefijo), devuelve el mapa fusionado para
+pintar la UI. **No administra nada.** Apikey del producto inyectada por su proxy (resuelve de qué
+consola es el mapa). Separado del plano `…/admin/**` a propósito: un tercero nunca comparte controller
+ni URL con la administración.
+
+```
+GET    …/client/privileges/resolve?roles=A,B  -> { "permissions": { tabs, actions, fields } }   (fusionado; roles vienen de Evolok)
 ```
 
 **permissions**: `{ tabs:{k:"visible"|"hidden"}, actions:{k:"allowed"|"denied"}, fields:{k:"editable"|"viewable"|"hidden"} }`.
@@ -171,31 +187,48 @@ GET    …/consoles/mine?app=    (configuracion.view)   -> { consoleId, product,
     perderla nunca. El registry de consolas además se **siembra** de la propiedad `console.products`
     (`.properties`: `consoleId:product:appconsole:apiKey:godEmail;…`) o del default `welcome-console`.
 
-## Cliente (SDK React `edge-console-sdk`)
+## Cliente — DOS SDK sobre un mismo núcleo
+
+El paquete `edge-console-sdk` expone **dos factories** que comparten núcleo (`client`/`keys`/`verify`),
+para separar lo que se entrega a un tercero de la administración de la consola mentor:
+
+| SDK | Factory | Import | Para | Backend | Auth |
+|-----|---------|--------|------|---------|------|
+| **edge-console-sdk** (consumidor) | `createConsole` | `@/edge-console-sdk` | terceros: consumir auth/roles/privilegios | `…/client/**` | apikey producto (proxy) |
+| **edge-console-administrator** (admin) | `createConsoleAdmin` | `@/edge-console-administrator` | godoservices (mentor): administrar consolas | `…/admin/**` + `…/consoles/**` | apikey / sesión |
+
+**Permisos en ambos**: el consumidor los **lee/verifica** (`resolve` + `verify`); el admin los **define**
+(`savePermissions`/`catalog`). Mismo `keys.js` → un único modelo (`Tab`/`Action`/`Naming`/`RESERVED_*`).
 
 ```js
+// --- edge-console-sdk (CONSUMIDOR / tercero) ---
 const sdk = createConsole({ consoleId: 'welcome-console', getEvolokSession });   // getEvolokSession = IC web
 const { operator, roles } = await sdk.auth.getOperator();      // Evolok directo; prefijo ya quitado
-const permissions = await sdk.privileges.resolve(roles);       // mapa fusionado (backend)
+const permissions = await sdk.privileges.resolve(roles);       // mapa fusionado (backend …/client/**)
 sdk.verify.actionAllowed(permissions, 'datos.delete');         // puro, sobre el snapshot
+
+// --- edge-console-administrator (ADMINISTRACIÓN / mentor) ---
+import { createConsoleAdmin } from '@/edge-console-administrator';
+const admin = createConsoleAdmin({ consoleId: 'welcome-console' });
 // admin de roles/privilegios + catálogo (apikey vía proxy):
-await sdk.admin.roles.create('editor', 'Editor de contenidos');
-await sdk.admin.savePermissions('EDITOR', { tabs, actions, fields });
-const catalog = await sdk.admin.catalog.get();                 // { roles, tabs, actions, fields }
-await sdk.admin.catalog.set({ tabs, actions, fields });        // define el catálogo (sin dups; reservadas fijas)
+await admin.admin.roles.create('editor', 'Editor de contenidos');
+await admin.admin.savePermissions('EDITOR', { tabs, actions, fields });
+const catalog = await admin.admin.catalog.get();               // { roles, tabs, actions, fields }
+await admin.admin.catalog.set({ tabs, actions, fields });      // define el catálogo (sin dups; reservadas fijas)
 // admin de consolas de la plataforma + config técnica del god (enforcement por sesión):
-const list = await sdk.consoles.list();
-const created = await sdk.consoles.create('running', 'console', 'god@grupogodo.com'); // created.apiKey (una vez)
-await sdk.consoles.update('running-console', { product, console, godEmail, apiKey }); // god edita todo
-await sdk.consoles.remove('running-console');
-const myConfig = await sdk.consoles.mine();    // { consoleId, rolePrefix, godGroup, apiKey, … }
+const list = await admin.consoles.list();
+const created = await admin.consoles.create('running', 'console', 'god@grupogodo.com'); // created.apiKey (una vez)
+await admin.consoles.update('running-console', { product, console, godEmail, apiKey }); // god edita todo
+await admin.consoles.remove('running-console');
+const myConfig = await admin.consoles.mine();  // { consoleId, rolePrefix, godGroup, apiKey, … }
 ```
 
 ## Backend — clases (web-core `com.grupogodo.edge.console`)
 
-- `controller/ConsoleProvisioningController` — plano `…/admin/**` (roles/privilegios/catálogo; protege `GOD` reservado).
-- `controller/IntegrationConsolesController` — plano `…/consoles/**` (alta/baja/lista de consolas + `/mine` config del god).
-- `auth/ConsoleApiKeyControl` + `ConsoleApiKeyInterceptor` — apikey (plano `…/admin/**`).
+- `controller/ConsoleClientController` — plano `…/client/**` (CONSUMO: `privileges/resolve`; lo llama el edge-console-sdk de un tercero).
+- `controller/ConsoleAdministratorController` — plano `…/admin/**` (roles/privilegios/catálogo + `permissions` del editor; protege `GOD` reservado). Lo consume el paquete edge-console-administrator (`admin.*`).
+- `controller/ConsolesAdministratorController` — plano `…/consoles/**` (alta/baja/lista de consolas de la plataforma + `/mine` config del god). Lo consume el paquete edge-console-administrator (`consoles.*`).
+- `auth/ConsoleApiKeyControl` + `ConsoleApiKeyInterceptor` — apikey (planos `…/admin/**` y `…/client/**`).
 - `auth/ConsolePrivilege` + `ConsolePrivilegeInterceptor` — enforcement (planos `/perfil/console/**` y `…/consoles/**`).
 - `service/ConsoleOperatorResolver` — roles desde Evolok (con `ConsoleRolesCache`).
 - `service/ConsoleRolesCache` (seam) + `impl/InMemoryConsoleRolesCache` + `ConsoleRolesCacheConfig` (@ConditionalOnMissingBean).

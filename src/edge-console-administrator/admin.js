@@ -1,4 +1,4 @@
-// edge-console-sdk/admin.js
+// edge-console-administrator/admin.js
 // Admin de roles/privilegios/catálogo — plano PROVISIONING (…/admin/**). Auth por apikey inyectada por
 // el proxy (en navegador no va la key). Roles con nombre pelado; el backend pone el prefijo Evolok.
 import { ADMIN } from './paths';
