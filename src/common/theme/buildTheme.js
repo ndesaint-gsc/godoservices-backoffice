@@ -1,6 +1,44 @@
 import { createTheme } from '@mui/material/styles';
 import { BRANDS, Brand } from './brand';
 
+// Estilo de botones outlined/text. Convención:
+//  - color="inherit"  → botón "cancelar/cerrar": FONDO BLANCO, TEXTO NEGRO, borde sutil (único ghost).
+//  - resto de colores → RELLENO: fondo = color.main, texto = contrastText (invierte el outlined clásico).
+function filledButton(theme, ownerState) {
+  const color = ownerState?.color || 'primary';
+  if (color === 'inherit') {
+    return {
+      backgroundColor: theme.palette.background.paper, // blanco
+      color: theme.palette.text.primary, // negro
+      border: '1px solid ' + theme.palette.divider,
+      '&:hover': {
+        backgroundColor: theme.palette.action.hover,
+        borderColor: theme.palette.divider,
+      },
+      '&.Mui-disabled': {
+        backgroundColor: theme.palette.background.paper,
+        color: theme.palette.action.disabled,
+        borderColor: theme.palette.divider,
+      },
+    };
+  }
+  const pal = theme.palette[color] || theme.palette.primary;
+  return {
+    backgroundColor: pal.main,
+    color: pal.contrastText,
+    border: '1px solid ' + pal.main,
+    '&:hover': {
+      backgroundColor: pal.dark || pal.main,
+      borderColor: pal.dark || pal.main,
+    },
+    '&.Mui-disabled': {
+      backgroundColor: theme.palette.action.disabledBackground,
+      color: theme.palette.action.disabled,
+      borderColor: theme.palette.action.disabledBackground,
+    },
+  };
+}
+
 // Builds the MUI theme for a given brand. Neutrals, typography, shape and the
 // component layout are shared across brands; only the accent (secondary), the
 // yellow `brandDetail` highlight, and the accent-driven focus/active states
@@ -73,15 +111,23 @@ export function buildTheme(brandKey = Brand.Godo) {
         defaultProps: { disableElevation: true, disableRipple: false },
         styleOverrides: {
           root: {
-            borderRadius: 8,
-            paddingInline: 18,
-            paddingBlock: 8,
+            borderRadius: 7,
+            paddingInline: 14,
+            paddingBlock: 5,
             fontWeight: 500,
+            fontSize: '0.8125rem',
+            lineHeight: 1.5,
+            minHeight: 32,
           },
           containedPrimary: {
             backgroundColor: '#111111',
             '&:hover': { backgroundColor: '#000000' },
           },
+          // Todos los botones llevan FONDO: las variantes outlined y text se pintan rellenas
+          // (fondo = color, texto = contraste; invierte el outlined clásico). Aplica a cualquier
+          // `color` (primary/secondary/error/…). Los IconButton y los Chip no se ven afectados.
+          outlined: ({ theme, ownerState }) => filledButton(theme, ownerState),
+          text: ({ theme, ownerState }) => filledButton(theme, ownerState),
         },
       },
       MuiPaper: {

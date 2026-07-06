@@ -4,12 +4,14 @@ import { useSelector } from 'react-redux';
 import {
   Box,
   Collapse,
+  Divider,
   Drawer,
   List,
   ListItem,
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  ListSubheader,
   Toolbar,
   Typography,
 } from '@mui/material';
@@ -19,16 +21,20 @@ import Subscriptions from '@mui/icons-material/Subscriptions';
 import Notifications from '@mui/icons-material/Notifications';
 import Receipt from '@mui/icons-material/Receipt';
 import Build from '@mui/icons-material/Build';
+import Security from '@mui/icons-material/Security';
+import Hub from '@mui/icons-material/Hub';
+import Settings from '@mui/icons-material/Settings';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import { NAV_ITEMS } from '@/common/router/nav.config';
 import { useHasPrivilege } from '@/common/permissions/useHasPrivilege';
+import { useTabVisible } from '@/common/permissions/permissions';
 import { selectHasCustomer } from '@/common/features/customer/customerSlice';
 import { useBrandConfig } from '@/common/theme/useBrand';
 
 const DRAWER_WIDTH = 240;
 
-const ICONS = { Home, Person, Subscriptions, Notifications, Receipt, Build };
+const ICONS = { Home, Person, Subscriptions, Notifications, Receipt, Build, Security, Hub, Settings };
 
 const itemSx = {
   mx: 1.25,
@@ -96,6 +102,17 @@ const NavGroup = ({ item, locked }) => {
   const hasActiveChild = item.children.some((child) => location.pathname.startsWith(child.path));
   const [open, setOpen] = useState(hasActiveChild);
 
+  // Cuando un hijo está activo, el padre adopta el color de selección (icono + texto),
+  // aunque el grupo esté plegado, para indicar qué sección contiene la página actual.
+  const parentSx = hasActiveChild
+    ? {
+        ...itemSx,
+        color: 'text.primary',
+        '& .MuiListItemIcon-root': { color: 'secondary.main', minWidth: 36 },
+        '& .MuiListItemText-primary': { fontWeight: 600 },
+      }
+    : itemSx;
+
   if (locked) {
     return (
       <ListItem disablePadding>
@@ -114,7 +131,7 @@ const NavGroup = ({ item, locked }) => {
   return (
     <>
       <ListItem disablePadding>
-        <ListItemButton onClick={() => setOpen((isOpen) => !isOpen)} sx={itemSx}>
+        <ListItemButton onClick={() => setOpen((isOpen) => !isOpen)} sx={parentSx}>
           {Icon && (
             <ListItemIcon>
               <Icon />
@@ -138,10 +155,13 @@ const NavGroup = ({ item, locked }) => {
 // One nav entry: resolves privilege + customer gating, then renders leaf or group.
 const NavEntry = ({ item }) => {
   const visible = useHasPrivilege(item.privilege);
+  const tabVisible = useTabVisible(item.tabKey);
   const hasCustomer = useSelector(selectHasCustomer);
 
   // Items without a privilege (e.g. Inicio) are always visible.
   if (item.privilege && !visible) return null;
+  // Gating por tab del registry de permisos del backend (tabs[tabKey] !== 'visible' → oculto).
+  if (item.tabKey && !tabVisible) return null;
 
   const locked = item.requiresCustomer && !hasCustomer;
 
@@ -203,7 +223,7 @@ const Nav = () => {
           component="div"
           sx={{ color: 'text.disabled', lineHeight: 1.2 }}
         >
-          Backoffice
+          Welcome
         </Typography>
         <Box
           component="img"
@@ -212,11 +232,30 @@ const Nav = () => {
           sx={{ display: 'block', height: brand.logoHeight, width: 'auto' }}
         />
       </Toolbar>
-      <List sx={{ flexGrow: 1, py: 1 }}>
-        {NAV_ITEMS.map((item) => (
+      <List sx={{ flexGrow: 1, py: 1, overflowY: 'auto' }}>
+        {NAV_ITEMS.filter((item) => item.placement !== 'bottom').map((item) => (
           <NavEntry key={item.path || item.label} item={item} />
         ))}
       </List>
+      {NAV_ITEMS.some((item) => item.placement === 'bottom') && (
+        <>
+          <Divider />
+          <List
+            sx={{ py: 1 }}
+            subheader={
+              <ListSubheader
+                sx={{ bgcolor: 'transparent', lineHeight: 2, color: 'text.disabled', fontSize: '0.7rem' }}
+              >
+                Global · no requiere cliente
+              </ListSubheader>
+            }
+          >
+            {NAV_ITEMS.filter((item) => item.placement === 'bottom').map((item) => (
+              <NavEntry key={item.path || item.label} item={item} />
+            ))}
+          </List>
+        </>
+      )}
     </Drawer>
   );
 };

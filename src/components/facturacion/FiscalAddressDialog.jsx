@@ -67,7 +67,7 @@ const FiscalAddressDialog = ({ open, onClose, evUser, guid, title, onConfirm }) 
           />
         </DialogContent>
         <DialogActions>
-          <Button type="button" variant="text" onClick={onClose} disabled={submitting}>
+          <Button type="button" variant="text" color="inherit" onClick={onClose} disabled={submitting}>
             Cancelar
           </Button>
           <Button

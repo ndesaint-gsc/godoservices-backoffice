@@ -12,6 +12,7 @@ import {
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import { useSnackbar } from 'notistack';
 import { useHasPrivilege } from '@/common/permissions/useHasPrivilege';
+import { useActionAllowed } from '@/common/permissions/permissions';
 import { Priv } from '@/common/permissions/privileges';
 import toolsService from '@/services/tools.service';
 
@@ -19,7 +20,10 @@ const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 const NifMasivo = () => {
   const { enqueueSnackbar } = useSnackbar();
-  const canEdit = useHasPrivilege(Priv.EDIT_HERRAMIENTAS);
+  // Edición combinada con el gating por ACCIÓN (default-deny).
+  const hasEditPriv = useHasPrivilege(Priv.EDIT_HERRAMIENTAS);
+  const canUploadNifs = useActionAllowed('herramientas.uploadNifs');
+  const canEdit = hasEditPriv && canUploadNifs;
 
   const [csvFile, setCsvFile] = useState(null);
   const [email, setEmail] = useState('');

@@ -17,6 +17,7 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import { useSnackbar } from 'notistack';
 import { patchEvUser, selectCustomer, setCustomer } from '@/common/features/customer/customerSlice';
 import { useHasPrivilege } from '@/common/permissions/useHasPrivilege';
+import { useActionAllowed, useFieldMode } from '@/common/permissions/permissions';
 import { Priv } from '@/common/permissions/privileges';
 import { ModalContext } from '@/common/providers/ModalProvider';
 import { GENDERS, LANGUAGES, COUNTRIES } from '@/common/profileOptions';
@@ -145,6 +146,25 @@ const Datos = () => {
   const modal = useContext(ModalContext);
   const customer = useSelector(selectCustomer);
   const canEdit = useHasPrivilege(Priv.EDIT_DATOS);
+  // Gating por ACCIÓN desde el registry de permisos del backend (action[key] === 'allowed').
+  // Patrón: cada botón comprueba su acción namespaced. (TODO: cablear el resto de vistas/acciones:
+  // facturacion.substitute/rectify/negative/recalculate/fiscalEdit, suscripciones.*, notificaciones.*,
+  // herramientas.* — mismas claves que ConsolePermissionsCatalog en el backend.)
+  const canEditPersonal = useActionAllowed('datos.editPersonal');
+  const canResetPassword = useActionAllowed('datos.resetPassword');
+  const canSendVerification = useActionAllowed('datos.sendVerification');
+  const canInvalidateCache = useActionAllowed('datos.invalidateCache');
+  const canUnblock = useActionAllowed('datos.unblock');
+  const canDelete = useActionAllowed('datos.delete');
+  const canNifLink = useActionAllowed('datos.nifLink');
+  const canNifUnlink = useActionAllowed('datos.nifUnlink');
+
+  // Modo de campo (default-deny vía 'editable' por defecto del motor):
+  // - personalData: 'editable' edita; 'viewable' solo-lectura sin botón guardar; 'hidden' oculta el bloque.
+  // - identification: bloque read-only; 'hidden' oculta, cualquier otro valor ('editable'/'viewable') muestra.
+  const personalDataMode = useFieldMode('datos.personalData');
+  const identificationMode = useFieldMode('datos.identification');
+  const personalReadOnly = personalDataMode !== 'editable';
 
   const customerData = customer?.raw;
   const evUser = customerData?.evUser || {};
@@ -152,12 +172,14 @@ const Datos = () => {
   const [form, setForm] = useState(buildInitialForm(evUser));
   const [saving, setSaving] = useState(false);
   const [runningAction, setRunningAction] = useState(false);
+  const [nifInput, setNifInput] = useState('');
 
   // Re-sync the form whenever the customer data changes — on customer switch
   // AND after a save/action refetch (setCustomer makes a new object), so the
   // fields reflect what's actually stored instead of going stale.
   useEffect(() => {
     setForm(buildInitialForm(evUser));
+    setNifInput(evUser?.nif ?? '');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customerData]);
 
@@ -235,7 +257,7 @@ const Datos = () => {
               [field.name]: fromDateInputValue(event.target.value),
             }))
           }
-          disabled={!canEdit || saving}
+          disabled={!canEdit || saving || personalReadOnly}
           fullWidth
           size="small"
           InputLabelProps={{ shrink: true }}
@@ -251,7 +273,7 @@ const Datos = () => {
           label={field.label}
           value={valueInOptions ? form[field.name] : ''}
           onChange={handleFieldChange(field.name)}
-          disabled={!canEdit || saving}
+          disabled={!canEdit || saving || personalReadOnly}
           fullWidth
           size="small"
           InputLabelProps={{ shrink: true }}
@@ -273,7 +295,7 @@ const Datos = () => {
         label={field.label}
         value={form[field.name] ?? ''}
         onChange={handleFieldChange(field.name)}
-        disabled={!canEdit || saving}
+        disabled={!canEdit || saving || personalReadOnly}
         fullWidth
         size="small"
         InputLabelProps={{ shrink: true }}
@@ -289,7 +311,8 @@ const Datos = () => {
 
   return (
     <Stack spacing={3}>
-      {/* Identity (read-only) */}
+      {/* Identity (read-only). Bloque read-only: 'hidden' lo oculta, el resto lo muestra. */}
+      {identificationMode !== 'hidden' && (
       <Paper variant="outlined" sx={{ p: { xs: 3, md: 4 } }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
           <Box>
@@ -336,8 +359,11 @@ const Datos = () => {
           <ReadOnlyField label="Brand" value={evUser.brand} />
         </Box>
       </Paper>
+      )}
 
-      {/* Personal data (editable with EDIT_DATOS) */}
+      {/* Personal data (editable with EDIT_DATOS). Modo de campo:
+          'hidden' oculta el bloque; 'viewable' lo deja solo-lectura sin botón guardar. */}
+      {personalDataMode !== 'hidden' && (
       <Paper variant="outlined" sx={{ p: { xs: 3, md: 4 } }}>
         <Typography variant="overline" color="text.secondary">
           Perfil del usuario
@@ -345,18 +371,18 @@ const Datos = () => {
         <Typography variant="h6" sx={{ mt: 0.25 }}>
           Datos personales
         </Typography>
-        {!canEdit && (
+        {(!canEdit || personalReadOnly) && (
           <Typography variant="caption" color="text.secondary">
             Modo lectura. No tienes permiso para editar.
           </Typography>
         )}
         <Box sx={fieldGridStyles}>{PERSONAL_FIELDS.map(renderEditableField)}</Box>
-        {canEdit && (
+        {canEdit && !personalReadOnly && (
           <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
             <Button
               variant="contained"
               onClick={handleSave}
-              disabled={saving}
+              disabled={saving || !canEditPersonal}
               startIcon={saving ? <CircularProgress size={16} /> : null}
             >
               Guardar cambios
@@ -364,6 +390,7 @@ const Datos = () => {
           </Box>
         )}
       </Paper>
+      )}
 
       {/* Credentials */}
       <Paper variant="outlined" sx={{ p: { xs: 3, md: 4 } }}>
@@ -396,7 +423,7 @@ const Datos = () => {
             <Button
               variant="outlined"
               color="success"
-              disabled={runningAction}
+              disabled={runningAction || !canResetPassword}
               onClick={() =>
                 runCredentialAction(
                   () => datosService.resetPassword(evUser),
@@ -409,7 +436,7 @@ const Datos = () => {
             <Button
               variant="outlined"
               color="success"
-              disabled={runningAction}
+              disabled={runningAction || !canSendVerification}
               onClick={() =>
                 runCredentialAction(
                   () => datosService.sendVerification(evUser),
@@ -421,7 +448,7 @@ const Datos = () => {
             </Button>
             <Button
               variant="outlined"
-              disabled={runningAction}
+              disabled={runningAction || !canInvalidateCache}
               onClick={() =>
                 runCredentialAction(() => datosService.invalidateCache(evUser.guid), 'Caché invalidada')
               }
@@ -430,15 +457,65 @@ const Datos = () => {
             </Button>
             <Button
               variant="outlined"
-              disabled={runningAction}
+              disabled={runningAction || !canUnblock}
               onClick={() =>
                 runCredentialAction(() => datosService.unblockUser(evUser.guid), 'Usuario desbloqueado')
               }
             >
               Desbloquear usuario
             </Button>
-            <Button variant="outlined" color="error" disabled={runningAction} onClick={confirmDeleteUser}>
+            <Button variant="outlined" color="error" disabled={runningAction || !canDelete} onClick={confirmDeleteUser}>
               Eliminar usuario
+            </Button>
+          </Stack>
+        )}
+      </Paper>
+
+      {/* NIF/NIE (vincular / desvincular) */}
+      <Paper variant="outlined" sx={{ p: { xs: 3, md: 4 } }}>
+        <Typography variant="overline" color="text.secondary">
+          Identificación fiscal
+        </Typography>
+        <Typography variant="h6" sx={{ mt: 0.25, mb: 1.5 }}>
+          NIF / NIE
+        </Typography>
+        {!canEdit ? (
+          <Typography variant="caption" color="text.secondary">
+            Modo lectura. No tienes permiso para ejecutar acciones.
+          </Typography>
+        ) : (
+          <Stack direction="row" spacing={1.5} alignItems="flex-start" flexWrap="wrap" useFlexGap>
+            <TextField
+              label="NIF / NIE"
+              value={nifInput}
+              onChange={(event) => setNifInput(event.target.value)}
+              disabled={runningAction}
+              size="small"
+              sx={{ minWidth: 240 }}
+              InputLabelProps={{ shrink: true }}
+            />
+            <Button
+              variant="outlined"
+              color="success"
+              disabled={runningAction || !nifInput.trim() || !canNifLink}
+              onClick={() =>
+                runCredentialAction(
+                  () => datosService.linkNif(evUser.guid, nifInput.trim()),
+                  'NIF vinculado',
+                )
+              }
+            >
+              Vincular
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              disabled={runningAction || !canNifUnlink}
+              onClick={() =>
+                runCredentialAction(() => datosService.unlinkNif(evUser.guid), 'NIF desvinculado')
+              }
+            >
+              Desvincular
             </Button>
           </Stack>
         )}

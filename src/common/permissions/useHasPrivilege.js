@@ -1,7 +1,3 @@
-import { useSelector } from 'react-redux';
-import { hasPrivilege } from '@/common/permissions/privileges';
-
-export const useHasPrivilege = (privilege) => {
-  const userRoles = useSelector((state) => state.auth.user?.roles || []);
-  return hasPrivilege(userRoles, privilege);
-};
+// Reexport por compatibilidad. La implementación vive en el edge-console-sdk (lee el snapshot del
+// ConsoleProvider, no redux directamente).
+export { useHasPrivilege } from '@/edge-console-sdk/react';

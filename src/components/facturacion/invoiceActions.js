@@ -23,10 +23,13 @@ export const STATE_LABELS = {
 // Build the action list for an invoice, mirroring the legacy conditions.
 // `handlers` = { onDownload(invoice, force), onSubstitute(invoice),
 //                onRectify(invoice), onNegative(invoice), onRecalculate(invoice) }.
+// Each action carries a `perm` tag (the permission action key that gates it, or
+// null for the always-available download/regenerate) so the table can disable
+// the menu item visually per `useActionAllowed`.
 export const buildInvoiceActions = (invoice, handlers) => {
   const actions = [];
-  const addAction = (key, label, onClick) => {
-    if (!actions.some((action) => action.key === key)) actions.push({ key, label, onClick });
+  const addAction = (key, label, onClick, perm = null) => {
+    if (!actions.some((action) => action.key === key)) actions.push({ key, label, onClick, perm });
   };
 
   if (invoice.downloadAction) addAction('download', 'Descargar', () => handlers.onDownload(invoice, false));
@@ -38,9 +41,9 @@ export const buildInvoiceActions = (invoice, handlers) => {
     }
     if (invoice.transactionType !== 'REFUND') {
       if (invoice.type === 'SIMPLIFIED') {
-        addAction('complete', 'Generar factura completa', () => handlers.onSubstitute(invoice));
+        addAction('complete', 'Generar factura completa', () => handlers.onSubstitute(invoice), 'facturacion.substitute');
       } else if (['COMPLETE', 'RECTIFICATION', 'SUBSTITUTIVE'].includes(invoice.type)) {
-        addAction('rectify', 'Cambiar datos fiscales', () => handlers.onRectify(invoice));
+        addAction('rectify', 'Cambiar datos fiscales', () => handlers.onRectify(invoice), 'facturacion.rectify');
       }
     }
   }
@@ -51,10 +54,10 @@ export const buildInvoiceActions = (invoice, handlers) => {
       addAction('regenerate', 'Regenerar factura', () => handlers.onDownload(invoice, true));
     }
     if (['COMPLETE', 'RECTIFICATION'].includes(invoice.type)) {
-      addAction('rectify', 'Cambiar datos fiscales', () => handlers.onRectify(invoice));
+      addAction('rectify', 'Cambiar datos fiscales', () => handlers.onRectify(invoice), 'facturacion.rectify');
     }
     if (['CORPORATE', 'EMPRESALV', 'EMPLV_RECTI', 'CORP_RECTI'].includes(invoice.transactionType)) {
-      addAction('negative', 'Generar abono', () => handlers.onNegative(invoice));
+      addAction('negative', 'Generar abono', () => handlers.onNegative(invoice), 'facturacion.negative');
     }
   }
 
@@ -62,7 +65,7 @@ export const buildInvoiceActions = (invoice, handlers) => {
     !invoice.recalculateInvoiceAction &&
     (invoice.invoiceId?.includes('FS') || invoice.invoiceId?.includes('FO'))
   ) {
-    addAction('recalculate', 'Recalcular factura', () => handlers.onRecalculate(invoice));
+    addAction('recalculate', 'Recalcular factura', () => handlers.onRecalculate(invoice), 'facturacion.recalculate');
     if (!invoice.downloadForceOption) {
       addAction('regenerate', 'Regenerar factura', () => handlers.onDownload(invoice, true));
     }

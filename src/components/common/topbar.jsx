@@ -20,7 +20,7 @@ import AccountCircle from '@mui/icons-material/AccountCircle';
 import LogoutIcon from '@mui/icons-material/Logout';
 import CheckIcon from '@mui/icons-material/Check';
 import { useSnackbar } from 'notistack';
-import { logout, setRoles } from '@/common/features/auth/authSlice';
+import { logout, setRoles, loadPermissions } from '@/common/features/auth/authSlice';
 import { PREDEFINED_ROLE_SETS } from '@/services/auth.service';
 import {
   clearCustomer,
@@ -86,7 +86,6 @@ const Topbar = () => {
       const displayName =
         customerData.evUser?.display_name || customerData.evUser?.email_address || 'usuario';
       enqueueSnackbar(`Usuario cargado: ${displayName}`, { variant: 'success' });
-      setSearchQuery('');
       if (!isCustomerScoped(location.pathname)) {
         navigate('/datos');
       }
@@ -104,6 +103,8 @@ const Topbar = () => {
 
   const handlePickRoles = (roles) => {
     dispatch(setRoles(roles));
+    // DEV: recarga permisos reales del backend para el rol primario seleccionado.
+    dispatch(loadPermissions(roles[0]));
     closeMenu();
   };
 
@@ -152,10 +153,21 @@ const Topbar = () => {
                 {getInitials(customer.displayName || customer.email || '')}
               </Avatar>
             }
-            label={customer.displayName || customer.email}
+            label={
+              <Box sx={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15, overflow: 'hidden' }}>
+                <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
+                  {customer.displayName || customer.email}
+                </Typography>
+                {customer.email && customer.email !== (customer.displayName || customer.email) && (
+                  <Typography variant="caption" color="text.secondary" noWrap>
+                    {customer.email}
+                  </Typography>
+                )}
+              </Box>
+            }
             onDelete={handleClearCustomer}
             variant="outlined"
-            sx={{ fontWeight: 500, maxWidth: 240 }}
+            sx={{ maxWidth: 280, height: 'auto', '& .MuiChip-label': { py: 0.5, display: 'block' } }}
           />
         )}
 

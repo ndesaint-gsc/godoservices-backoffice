@@ -1,7 +1,6 @@
 import { useContext, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
-  Alert,
   Box,
   Button,
   Chip,
@@ -15,10 +14,12 @@ import {
 import { useSnackbar } from 'notistack';
 import { selectCustomer, setCustomer } from '@/common/features/customer/customerSlice';
 import { useHasPrivilege } from '@/common/permissions/useHasPrivilege';
+import { useActionAllowed } from '@/common/permissions/permissions';
 import { Priv } from '@/common/permissions/privileges';
 import { ModalContext } from '@/common/providers/ModalProvider';
 import userService from '@/services/user.service';
 import subscriptionsService from '@/services/subscriptions.service';
+import CreateAccessDialog from '@/components/roles/CreateAccessDialog';
 
 const formatDate = (milliseconds) => {
   if (!milliseconds) return null;
@@ -42,7 +43,11 @@ const Accesos = () => {
   const modal = useContext(ModalContext);
   const customer = useSelector(selectCustomer);
   const canEdit = useHasPrivilege(Priv.EDIT_SUSCRIPCIONES);
+  // Gating por ACCIÓN (default-deny): crear acceso temporal / revocar.
+  const canRoleCreate = useActionAllowed('suscripciones.roleCreate');
+  const canRoleRevoke = useActionAllowed('suscripciones.roleRevoke');
   const [revoking, setRevoking] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const evUser = customer?.raw?.evUser || {};
   const roleAssignments = evUser.roleAssignments || [];
@@ -73,11 +78,10 @@ const Accesos = () => {
     });
   };
 
-  const notifyCreatePending = () =>
-    enqueueSnackbar(
-      'Crear acceso temporal requiere el catálogo de roles (servido como HTML en el BO antiguo); pendiente de JSON.',
-      { variant: 'info' },
-    );
+  const handleCreated = async () => {
+    setCreateOpen(false);
+    await refreshCustomer();
+  };
 
   return (
     <Paper variant="outlined" sx={{ p: { xs: 3, md: 4 } }}>
@@ -90,8 +94,8 @@ const Accesos = () => {
             Accesos temporales
           </Typography>
         </Box>
-        {canEdit && (
-          <Button variant="contained" onClick={notifyCreatePending}>
+        {canEdit && canRoleCreate && (
+          <Button variant="contained" onClick={() => setCreateOpen(true)}>
             Crear acceso temporal
           </Button>
         )}
@@ -112,7 +116,7 @@ const Accesos = () => {
                   disableGutters
                   sx={{ py: 1.5, display: 'flex', justifyContent: 'space-between', gap: 2 }}
                   secondaryAction={
-                    canEdit && isTemporal ? (
+                    canEdit && canRoleRevoke && isTemporal ? (
                       <Button
                         size="small"
                         color="error"
@@ -142,11 +146,14 @@ const Accesos = () => {
         </List>
       )}
 
-      <Alert severity="info" variant="outlined" sx={{ mt: 3 }}>
-        La creación de accesos temporales requiere el catálogo de roles asignables
-        (servido como HTML en el backoffice antiguo). Se añadirá cuando esté disponible
-        como JSON.
-      </Alert>
+      {canEdit && canRoleCreate && (
+        <CreateAccessDialog
+          open={createOpen}
+          evUser={evUser}
+          onClose={() => setCreateOpen(false)}
+          onCreated={handleCreated}
+        />
+      )}
     </Paper>
   );
 };

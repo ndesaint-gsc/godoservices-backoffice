@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
-  Alert,
   Box,
   Button,
+  Checkbox,
   Chip,
   CircularProgress,
   FormControlLabel,
+  FormGroup,
   Paper,
   Stack,
   Switch,
@@ -15,8 +16,13 @@ import {
 import { useSnackbar } from 'notistack';
 import { patchEvUser, selectCustomer } from '@/common/features/customer/customerSlice';
 import { useHasPrivilege } from '@/common/permissions/useHasPrivilege';
+import { useActionAllowed } from '@/common/permissions/permissions';
 import { Priv } from '@/common/permissions/privileges';
+import { sortByText } from '@/common/sort';
 import notificationsService from '@/services/notifications.service';
+
+// Etiqueta visible de un item de catálogo (name con fallback a id).
+const catalogText = (item) => item?.name ?? String(item?.id ?? '');
 
 // evUser boolean opt-ins -> label.
 const OPT_INS = [
@@ -27,6 +33,9 @@ const OPT_INS = [
 ];
 
 const toBoolean = (value) => value === true || value === 'true';
+
+// evUser guarda newsletters/intereses como ids separados por '|'.
+const splitIds = (value) => (value ? String(value).split('|').filter(Boolean) : []);
 
 const readErrorMessage = (error) => {
   const rawMessage = error?.message || '';
@@ -47,6 +56,10 @@ const readErrorMessage = (error) => {
 const buildInitialOptIns = (evUser) =>
   OPT_INS.reduce((optIns, optIn) => ({ ...optIns, [optIn.name]: toBoolean(evUser?.[optIn.name]) }), {});
 
+const sameIdSet = (firstIds, secondIds) =>
+  firstIds.length === secondIds.length &&
+  [...firstIds].sort().join('|') === [...secondIds].sort().join('|');
+
 const SubscriptionChips = ({ items, emptyText }) => {
   if (!items.length) {
     return (
@@ -65,31 +78,109 @@ const SubscriptionChips = ({ items, emptyText }) => {
   );
 };
 
+// Grupo editable de checkboxes desde un catálogo (id -> name), con selección marcada.
+const CatalogCheckboxes = ({ catalog, selectedIds, onToggle, disabled, emptyText }) => {
+  if (!catalog.length) {
+    return (
+      <Typography variant="body2" color="text.secondary">
+        {emptyText}
+      </Typography>
+    );
+  }
+  return (
+    <FormGroup sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' } }}>
+      {catalog.map((item) => (
+        <FormControlLabel
+          key={item.id}
+          control={
+            <Checkbox
+              size="small"
+              color="secondary"
+              checked={selectedIds.includes(item.id)}
+              onChange={() => onToggle(item.id)}
+              disabled={disabled}
+            />
+          }
+          label={item.name || item.id}
+        />
+      ))}
+    </FormGroup>
+  );
+};
+
 const Notificaciones = () => {
   const dispatch = useDispatch();
   const { enqueueSnackbar } = useSnackbar();
   const customer = useSelector(selectCustomer);
   const canEdit = useHasPrivilege(Priv.EDIT_NOTIFICACIONES);
+  // Gating por ACCIÓN (default-deny): opt-ins y catálogo (newsletters/intereses) por separado.
+  const canEditOptins = useActionAllowed('notificaciones.editOptins');
+  const canEditCatalog = useActionAllowed('notificaciones.editCatalog');
 
   const customerData = customer?.raw;
   const evUser = customerData?.evUser || {};
-  const newsletters = customerData?.newsletters || [];
-  const generalInterests = customerData?.genInterests || [];
+  const currentNewsletters = splitIds(evUser.newsletters);
+  const currentGenInterests = splitIds(evUser.genInterests);
   const editorialInterests = customerData?.editorialInterests || [];
 
   const [optIns, setOptIns] = useState(buildInitialOptIns(evUser));
   const [saving, setSaving] = useState(false);
 
-  // Re-sync from the store on customer change / post-save refetch.
+  // Catálogos globales (EvolokConfig). Generales = category == null; el resto (sport/editorial)
+  // se queda solo-lectura por inconsistencia legacy (el form guarda sportInterests pero el
+  // dato leído es interests_editorial → no se puede pre-marcar de forma fiable).
+  const [newslettersCatalog, setNewslettersCatalog] = useState([]);
+  const [generalInterestsCatalog, setGeneralInterestsCatalog] = useState([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [selectedNewsletters, setSelectedNewsletters] = useState(currentNewsletters);
+  const [selectedGenInterests, setSelectedGenInterests] = useState(currentGenInterests);
+  const [savingCatalog, setSavingCatalog] = useState(false);
+
+  // Re-sync de opt-ins y selección desde el store al cambiar de cliente / refetch.
   useEffect(() => {
     setOptIns(buildInitialOptIns(evUser));
+    setSelectedNewsletters(splitIds(customerData?.evUser?.newsletters));
+    setSelectedGenInterests(splitIds(customerData?.evUser?.genInterests));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customerData]);
+
+  // Carga de catálogos (una vez; son globales, no dependen del cliente).
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const [newsletters, interests] = await Promise.all([
+          notificationsService.getNewslettersCatalog(),
+          notificationsService.getInterestsCatalog(),
+        ]);
+        if (!active) return;
+        // El backend devuelve listas planas (ya deduplicadas). Las usamos directas.
+        const allInterests = Array.isArray(interests) ? interests : [];
+        setNewslettersCatalog(sortByText(Array.isArray(newsletters) ? newsletters : [], catalogText));
+        setGeneralInterestsCatalog(
+          sortByText(allInterests.filter((item) => item.category == null), catalogText),
+        );
+      } catch (error) {
+        if (active) enqueueSnackbar('No se pudo cargar el catálogo: ' + readErrorMessage(error), { variant: 'error' });
+      } finally {
+        if (active) setCatalogLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (!customerData) return null;
 
   const handleToggle = (optInName) => (event) =>
     setOptIns((previousOptIns) => ({ ...previousOptIns, [optInName]: event.target.checked }));
+
+  const toggleId = (setter) => (id) =>
+    setter((previous) =>
+      previous.includes(id) ? previous.filter((value) => value !== id) : [...previous, id],
+    );
 
   const handleSave = async () => {
     const changedOptIns = OPT_INS.filter(
@@ -114,6 +205,41 @@ const Notificaciones = () => {
       setSaving(false);
     }
   };
+
+  // Guarda newsletters + intereses generales (array de ids), solo los grupos que cambiaron.
+  const handleSaveCatalog = async () => {
+    const attributes = [];
+    if (!sameIdSet(selectedNewsletters, currentNewsletters)) {
+      attributes.push({ name: 'newsletters', value: selectedNewsletters });
+    }
+    if (!sameIdSet(selectedGenInterests, currentGenInterests)) {
+      attributes.push({ name: 'genInterests', value: selectedGenInterests });
+    }
+    if (attributes.length === 0) {
+      enqueueSnackbar('No hay cambios que guardar', { variant: 'info' });
+      return;
+    }
+    setSavingCatalog(true);
+    try {
+      await notificationsService.updateAttributes(evUser.guid, attributes);
+      // evUser guarda los ids como string separada por '|'.
+      dispatch(
+        patchEvUser({
+          newsletters: selectedNewsletters.join('|'),
+          genInterests: selectedGenInterests.join('|'),
+        }),
+      );
+      enqueueSnackbar('Newsletters e intereses actualizados', { variant: 'success' });
+    } catch (error) {
+      enqueueSnackbar('Error al guardar: ' + readErrorMessage(error), { variant: 'error' });
+    } finally {
+      setSavingCatalog(false);
+    }
+  };
+
+  const catalogDirty =
+    !sameIdSet(selectedNewsletters, currentNewsletters) ||
+    !sameIdSet(selectedGenInterests, currentGenInterests);
 
   return (
     <Stack spacing={3}>
@@ -151,7 +277,7 @@ const Notificaciones = () => {
             <Button
               variant="contained"
               onClick={handleSave}
-              disabled={saving}
+              disabled={saving || !canEditOptins}
               startIcon={saving ? <CircularProgress size={16} /> : null}
             >
               Guardar cambios
@@ -160,35 +286,65 @@ const Notificaciones = () => {
         )}
       </Paper>
 
-      {/* Newsletters + Interests — current subscriptions (read-only until the
-          EvolokConfig catalog is exposed as JSON for full edit). */}
+      {/* Newsletters + intereses generales (editables vía catálogo EvolokConfig). */}
       <Paper variant="outlined" sx={{ p: { xs: 3, md: 4 } }}>
         <Typography variant="overline" color="text.secondary">
           Newsletters
         </Typography>
         <Typography variant="h6" sx={{ mt: 0.25, mb: 1.5 }}>
-          Suscripciones actuales
+          Suscripciones
         </Typography>
-        <SubscriptionChips items={newsletters} emptyText="Sin newsletters suscritas." />
+        {catalogLoading ? (
+          <CircularProgress size={20} />
+        ) : (
+          <CatalogCheckboxes
+            catalog={newslettersCatalog}
+            selectedIds={selectedNewsletters}
+            onToggle={toggleId(setSelectedNewsletters)}
+            disabled={!canEdit || savingCatalog}
+            emptyText="No hay catálogo de newsletters disponible."
+          />
+        )}
 
         <Typography variant="overline" color="text.secondary" sx={{ mt: 3, display: 'block' }}>
           Intereses
         </Typography>
-        <Box sx={{ mt: 1 }}>
-          <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
-            Generales
-          </Typography>
-          <SubscriptionChips items={generalInterests} emptyText="Sin intereses generales." />
-          <Typography variant="body2" sx={{ fontWeight: 600, mt: 2, mb: 0.5 }}>
-            Editoriales
-          </Typography>
-          <SubscriptionChips items={editorialInterests} emptyText="Sin intereses editoriales." />
-        </Box>
+        <Typography variant="body2" sx={{ fontWeight: 600, mt: 1, mb: 0.5 }}>
+          Generales
+        </Typography>
+        {catalogLoading ? (
+          <CircularProgress size={20} />
+        ) : (
+          <CatalogCheckboxes
+            catalog={generalInterestsCatalog}
+            selectedIds={selectedGenInterests}
+            onToggle={toggleId(setSelectedGenInterests)}
+            disabled={!canEdit || savingCatalog}
+            emptyText="No hay catálogo de intereses generales disponible."
+          />
+        )}
 
-        <Alert severity="info" variant="outlined" sx={{ mt: 3 }}>
-          La edición de newsletters e intereses requiere el catálogo de EvolokConfig
-          como JSON (pendiente). De momento se muestran las suscripciones actuales.
-        </Alert>
+        <Typography variant="body2" sx={{ fontWeight: 600, mt: 2, mb: 0.5 }}>
+          Editoriales
+        </Typography>
+        <SubscriptionChips items={editorialInterests} emptyText="Sin intereses editoriales." />
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+          Solo lectura: el dato leído (interests_editorial) no coincide con el atributo que
+          edita el backoffice antiguo (sportInterests); pendiente de unificar para edición segura.
+        </Typography>
+
+        {canEdit && (
+          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
+            <Button
+              variant="contained"
+              onClick={handleSaveCatalog}
+              disabled={savingCatalog || catalogLoading || !catalogDirty || !canEditCatalog}
+              startIcon={savingCatalog ? <CircularProgress size={16} /> : null}
+            >
+              Guardar cambios
+            </Button>
+          </Box>
+        )}
       </Paper>
     </Stack>
   );
