@@ -26,13 +26,21 @@ const downloadInvoicePdf = (transactionId, fileName, force = false) => {
 // Generate complete / rectified / negative invoices (mutación → POST). Each returns
 // { newTransactionId, newInvoiceId } for the freshly generated document.
 const substitute = (transactionId, guid) =>
-  http.post(apiUrl('/perfil/console/invoices/' + transactionId + '/substitutive' + toQueryString({ guid })));
+  http.post(
+    apiUrl('/perfil/console/invoices/' + transactionId + '/substitutive' + toQueryString({ guid })),
+  );
 
 const rectify = (transactionId, guid) =>
-  http.post(apiUrl('/perfil/console/invoices/' + transactionId + '/rectification' + toQueryString({ guid })));
+  http.post(
+    apiUrl(
+      '/perfil/console/invoices/' + transactionId + '/rectification' + toQueryString({ guid }),
+    ),
+  );
 
 const negative = (transactionId, guid) =>
-  http.post(apiUrl('/perfil/console/invoices/' + transactionId + '/negative' + toQueryString({ guid })));
+  http.post(
+    apiUrl('/perfil/console/invoices/' + transactionId + '/negative' + toQueryString({ guid })),
+  );
 
 // Recalculate invoice. Load the editable line data, then save the edited lines.
 // GET returns { recalculateInvoiceList, invoiceId, price, totalTax, grossAmount,

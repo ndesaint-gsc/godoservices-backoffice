@@ -11,19 +11,15 @@ import {
 } from '@mui/material';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import { useSnackbar } from 'notistack';
-import { useHasPrivilege } from '@/common/permissions/useHasPrivilege';
 import { useActionAllowed } from '@/common/permissions/permissions';
-import { Priv } from '@/common/permissions/privileges';
 import toolsService from '@/services/tools.service';
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 const NifMasivo = () => {
   const { enqueueSnackbar } = useSnackbar();
-  // Edición combinada con el gating por ACCIÓN (default-deny).
-  const hasEditPriv = useHasPrivilege(Priv.EDIT_HERRAMIENTAS);
-  const canUploadNifs = useActionAllowed('herramientas.uploadNifs');
-  const canEdit = hasEditPriv && canUploadNifs;
+  // Gating por ACCIÓN (default-deny, rol activo).
+  const canEdit = useActionAllowed('herramientas.uploadNifs');
 
   const [csvFile, setCsvFile] = useState(null);
   const [email, setEmail] = useState('');
@@ -61,8 +57,8 @@ const NifMasivo = () => {
           Vinculación masiva de NIFs
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          Sube un CSV (UTF-8, separado por «;») con columnas Email;NIF;Resultado. El
-          proceso es asíncrono y el resultado se envía por email.
+          Sube un CSV (UTF-8, separado por «;») con columnas Email;NIF;Resultado. El proceso es
+          asíncrono y el resultado se envía por email.
         </Typography>
       </Box>
 

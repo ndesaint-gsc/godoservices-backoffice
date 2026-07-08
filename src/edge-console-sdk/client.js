@@ -17,7 +17,9 @@ export class ConsoleError extends Error {
 }
 
 const buildQuery = (params) => {
-  const entries = Object.entries(params || {}).filter(([, v]) => v !== undefined && v !== null && v !== '');
+  const entries = Object.entries(params || {}).filter(
+    ([, v]) => v !== undefined && v !== null && v !== '',
+  );
   if (!entries.length) return '';
   return '?' + new URLSearchParams(entries).toString();
 };
@@ -50,7 +52,10 @@ export function createConsoleClient(config = {}) {
     }
     if (!res.ok) {
       const text = await res.text().catch(() => '');
-      throw new ConsoleError(`${res.status} ${res.statusText}${text ? ': ' + text : ''}`, res.status);
+      throw new ConsoleError(
+        `${res.status} ${res.statusText}${text ? ': ' + text : ''}`,
+        res.status,
+      );
     }
     if (res.status === 204) return null;
 

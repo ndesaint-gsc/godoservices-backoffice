@@ -4,40 +4,42 @@
 // - `adminSdk` (edge-console-administrator, ADMINISTRACIÓN): admin de roles/privilegios/catálogo +
 //   admin de consolas. Solo lo usa godoservices como consola MENTOR.
 //
-// - AUTH del operador: DIRECTA contra Evolok. En prod hay que cablear el IC web (evl-accounts.js /
-//   window.evl) para leer el operador de backoffice + sus grupos Evolok. Mientras no esté cableado,
-//   se usa un mock DEV que respeta el override de rol del switcher.
-//   TODO(evolok-ic): sustituir devEvolokSession por la lectura real del IC web.
+// - AUTH del operador: DIRECTA contra Evolok (POST /ic/api/session + GET /userProfile + GET /userProfile/{guid}/role),
+//   implementada en edge-console-sdk/auth.service.js y expuesta aquí como `consoleAuthService`. En dev
+//   el proxy Vite reenvía `/ic/*` a ev.lavanguardia.biz para esquivar CORS.
 // - CONSUMO (mapa de privilegios): backend …/client/** (apikey inyectada por el proxy).
 // - ADMIN: backend …/admin/** (apikey) y …/consoles/** (sesión Evolok).
 import { createConsole } from '@/edge-console-sdk';
 import { createConsoleAdmin } from '@/edge-console-administrator';
 import { APP_ID } from '@/common/permissions/permissions';
-import authService from '@/services/auth.service';
 
-const devEvolokSession = async (roleOverride) => {
-  const roles = Array.isArray(roleOverride) ? roleOverride : roleOverride ? [roleOverride] : ['ADMIN'];
-  return {
-    operator: { id: 'op-mock', email: 'operador@grupogodo.com', name: 'Operador (mock)' },
-    // Grupos tal como los daría Evolok, con el prefijo {consoleId}- (el SDK lo quita → roles pelados).
-    groups: roles.map((r) => `${APP_ID}-${String(r).toUpperCase()}`),
-  };
+// Puente 401 → logout: el SDK (y http.js) no conocen redux, así que la app registra aquí el handler
+// (App.jsx → dispatch(logout()), que limpia redux + la sesión del SDK). Un 401 = sesión Evolok
+// inválida/caducada → logout completo. (La denegación por permiso de página NO pasa por aquí: va a
+// home desde AuthenticatedRoute.)
+let onUnauthorizedHandler = () => {};
+export const setOnUnauthorized = (handler) => {
+  onUnauthorizedHandler = typeof handler === 'function' ? handler : () => {};
 };
+// Dispara el handler de 401. Lo usan el cliente del SDK y http.js (operaciones) → mismo logout.
+export const notifyUnauthorized = () => onUnauthorizedHandler();
 
-const onUnauthorized = () => {
-  authService.logout();
-};
+// Base de Evolok: vacío en local → el proxy Vite reenvía `/ic/*` a ev.lavanguardia.{biz|com}.
+const EVOLOK_BASE = import.meta.env.VITE_EVOLOK_BASE || '';
 
 const sdk = createConsole({
   consoleId: APP_ID,
-  getEvolokSession: devEvolokSession,
-  onUnauthorized,
+  evolok: { baseUrl: EVOLOK_BASE, realm: 'default_realm' },
+  onUnauthorized: notifyUnauthorized,
 });
+
+// authService real (login/logout/getAuthToken/setSession) contra Evolok.
+export const consoleAuthService = sdk.authService;
 
 // Administración (mentor): sin getEvolokSession (no autentica al operador; usa sesión/apikey del proxy).
 export const adminSdk = createConsoleAdmin({
   consoleId: APP_ID,
-  onUnauthorized,
+  onUnauthorized: notifyUnauthorized,
 });
 
 export default sdk;

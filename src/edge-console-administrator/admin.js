@@ -18,10 +18,12 @@ export function createAdminApi(client) {
       remove: (name) => client.del(ADMIN + `/roles/${enc(name)}`),
       // Membresías: usuarios (email) asignados al grupo Evolok del rol, con fechas start/fin OPCIONALES.
       members: {
-        list: (name) => client.get(ADMIN + `/roles/${enc(name)}/members`).then((r) => r?.members || []),
+        list: (name) =>
+          client.get(ADMIN + `/roles/${enc(name)}/members`).then((r) => r?.members || []),
         assign: (name, email, startDate, endDate) =>
           client.post(ADMIN + `/roles/${enc(name)}/members`, { email, startDate, endDate }),
-        revoke: (name, email) => client.del(ADMIN + `/roles/${enc(name)}/members`, { params: { email } }),
+        revoke: (name, email) =>
+          client.del(ADMIN + `/roles/${enc(name)}/members`, { params: { email } }),
       },
     },
 

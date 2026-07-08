@@ -15,7 +15,12 @@ import {
   Typography,
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
-import { buildInvoiceActions, euroFormatter, formatInvoiceDate, STATE_LABELS } from './invoiceActions';
+import {
+  buildInvoiceActions,
+  euroFormatter,
+  formatInvoiceDate,
+  STATE_LABELS,
+} from './invoiceActions';
 
 const StateChip = ({ state }) => {
   const normalizedState = String(state || '').toUpperCase();
@@ -34,13 +39,14 @@ const StateChip = ({ state }) => {
 };
 
 // `handlers` is the action callback bag (see invoiceActions.buildInvoiceActions).
-// `canEdit` disables every action except download for read-only operators.
 // `actionAllowed` maps each gated action's `perm` key (facturacion.substitute /
 // rectify / negative / recalculate) to whether `useActionAllowed` permits it, so
-// each menu item is disabled visually when its permission is denied.
-const InvoicesTable = ({ invoices, loading, canEdit, runningAction, handlers, actionAllowed = {} }) => {
+// each menu item is disabled visually when its permission is denied. Actions with no
+// `perm` (download / regenerate) are always available (read operations).
+const InvoicesTable = ({ invoices, loading, runningAction, handlers, actionAllowed = {} }) => {
   const [actionMenu, setActionMenu] = useState({ anchor: null, invoice: null });
-  const openActionMenu = (event, invoice) => setActionMenu({ anchor: event.currentTarget, invoice });
+  const openActionMenu = (event, invoice) =>
+    setActionMenu({ anchor: event.currentTarget, invoice });
   const closeActionMenu = () => setActionMenu({ anchor: null, invoice: null });
 
   if (loading) {
@@ -109,15 +115,16 @@ const InvoicesTable = ({ invoices, loading, canEdit, runningAction, handlers, ac
         </Table>
       </TableContainer>
 
-      <Menu anchorEl={actionMenu.anchor} open={Boolean(actionMenu.anchor)} onClose={closeActionMenu}>
+      <Menu
+        anchorEl={actionMenu.anchor}
+        open={Boolean(actionMenu.anchor)}
+        onClose={closeActionMenu}
+      >
         {actionMenu.invoice &&
           buildInvoiceActions(actionMenu.invoice, handlers).map((action) => (
             <MenuItem
               key={action.key}
-              disabled={
-                (!canEdit && action.key !== 'download') ||
-                (action.perm ? !actionAllowed[action.perm] : false)
-              }
+              disabled={action.perm ? !actionAllowed[action.perm] : false}
               onClick={() => {
                 closeActionMenu();
                 action.onClick();

@@ -126,7 +126,12 @@ const Integraciones = () => {
   const startEdit = (c) => {
     setEditingId(c.consoleId);
     // apiKey vacío = conservar la actual (no se recupera la real, va enmascarada en la lista).
-    setEditDraft({ product: c.product, console: c.appconsole, godEmail: c.godEmail || '', apiKey: '' });
+    setEditDraft({
+      product: c.product,
+      console: c.appconsole,
+      godEmail: c.godEmail || '',
+      apiKey: '',
+    });
   };
   const cancelEdit = () => {
     setEditingId(null);
@@ -144,11 +149,15 @@ const Integraciones = () => {
         godEmail: editDraft.godEmail.trim(),
         apiKey: editDraft.apiKey.trim(), // vacío = sin cambios
       });
-      enqueueSnackbar(`Consola actualizada: ${res?.consoleId || editingId}`, { variant: 'success' });
+      enqueueSnackbar(`Consola actualizada: ${res?.consoleId || editingId}`, {
+        variant: 'success',
+      });
       cancelEdit();
       await load();
     } catch (error) {
-      enqueueSnackbar('Error al actualizar consola: ' + (error?.message || ''), { variant: 'error' });
+      enqueueSnackbar('Error al actualizar consola: ' + (error?.message || ''), {
+        variant: 'error',
+      });
     } finally {
       setSaving(false);
     }
@@ -198,7 +207,11 @@ const Integraciones = () => {
         <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
           Nueva consola
         </Typography>
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} sx={{ alignItems: 'flex-start' }}>
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          spacing={1.5}
+          sx={{ alignItems: 'flex-start' }}
+        >
           <TextField
             size="small"
             label="Producto"
@@ -233,7 +246,11 @@ const Integraciones = () => {
             required
             fullWidth
           />
-          <Button variant="contained" onClick={onCreate} disabled={!canCreate || saving || !formValid}>
+          <Button
+            variant="contained"
+            onClick={onCreate}
+            disabled={!canCreate || saving || !formValid}
+          >
             Crear consola
           </Button>
         </Stack>
@@ -319,7 +336,11 @@ const Integraciones = () => {
                               sx: { fontFamily: 'monospace' },
                               endAdornment: (
                                 <Tooltip title="Generar apikey nueva">
-                                  <IconButton size="small" edge="end" onClick={() => setDraft('apiKey', genApiKey())}>
+                                  <IconButton
+                                    size="small"
+                                    edge="end"
+                                    onClick={() => setDraft('apiKey', genApiKey())}
+                                  >
                                     <Autorenew fontSize="small" />
                                   </IconButton>
                                 </Tooltip>
@@ -331,7 +352,12 @@ const Integraciones = () => {
                         <TableCell align="right">
                           <Tooltip title="Guardar">
                             <span>
-                              <IconButton size="small" color="primary" onClick={onSaveEdit} disabled={saving || !editValid}>
+                              <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={onSaveEdit}
+                                disabled={saving || !editValid}
+                              >
                                 <Check fontSize="small" />
                               </IconButton>
                             </span>
@@ -372,13 +398,21 @@ const Integraciones = () => {
                             </IconButton>
                           </span>
                         </Tooltip>
-                        <Tooltip title={c.consoleId === APP_ID ? 'La consola mentor no se puede borrar' : 'Borrar consola'}>
+                        <Tooltip
+                          title={
+                            c.consoleId === APP_ID
+                              ? 'La consola mentor no se puede borrar'
+                              : 'Borrar consola'
+                          }
+                        >
                           <span>
                             <IconButton
                               size="small"
                               color="error"
                               onClick={() => onDelete(c.consoleId)}
-                              disabled={!canDelete || saving || !!editingId || c.consoleId === APP_ID}
+                              disabled={
+                                !canDelete || saving || !!editingId || c.consoleId === APP_ID
+                              }
                             >
                               <Delete fontSize="small" />
                             </IconButton>

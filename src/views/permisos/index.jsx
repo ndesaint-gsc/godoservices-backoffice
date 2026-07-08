@@ -86,8 +86,7 @@ const Permisos = () => {
     setDraft((d) => ({ ...d, tabs: { ...d.tabs, [key]: visible ? 'visible' : 'hidden' } }));
   const setAction = (key, allowed) =>
     setDraft((d) => ({ ...d, actions: { ...d.actions, [key]: allowed ? 'allowed' : 'denied' } }));
-  const setField = (key, mode) =>
-    setDraft((d) => ({ ...d, fields: { ...d.fields, [key]: mode } }));
+  const setField = (key, mode) => setDraft((d) => ({ ...d, fields: { ...d.fields, [key]: mode } }));
 
   const onSave = async () => {
     setSaving(true);
@@ -129,7 +128,9 @@ const Permisos = () => {
       enqueueSnackbar('Descripción actualizada', { variant: 'success' });
       await load(role);
     } catch (error) {
-      enqueueSnackbar('Error al actualizar descripción: ' + (error?.message || ''), { variant: 'error' });
+      enqueueSnackbar('Error al actualizar descripción: ' + (error?.message || ''), {
+        variant: 'error',
+      });
     } finally {
       setSaving(false);
     }
@@ -198,7 +199,11 @@ const Permisos = () => {
 
         {/* Alta de rol: nombre pelado + descripción (obligatoria). El backend crea el grupo Evolok
             {consoleId}-{ROL}. */}
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} sx={{ alignItems: 'flex-start' }}>
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          spacing={1.5}
+          sx={{ alignItems: 'flex-start' }}
+        >
           <TextField
             size="small"
             label="Nuevo rol"
@@ -230,7 +235,11 @@ const Permisos = () => {
         <Divider sx={{ my: 2 }} />
 
         {/* Descripción del rol seleccionado (editable, obligatoria) + baja. */}
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} sx={{ alignItems: 'flex-start' }}>
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          spacing={1.5}
+          sx={{ alignItems: 'flex-start' }}
+        >
           <TextField
             size="small"
             label={`Descripción de ${role}`}
@@ -249,7 +258,12 @@ const Permisos = () => {
           >
             Guardar descripción
           </Button>
-          <Button color="error" variant="outlined" onClick={onDeleteRole} disabled={!canEdit || saving}>
+          <Button
+            color="error"
+            variant="outlined"
+            onClick={onDeleteRole}
+            disabled={!canEdit || saving}
+          >
             Borrar rol
           </Button>
         </Stack>
@@ -260,21 +274,23 @@ const Permisos = () => {
           Tabs (visible / oculto)
         </Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
-          {[...catalog.tabs].sort((a, b) => a.localeCompare(b)).map((key) => (
-            <FormControlLabel
-              key={key}
-              control={
-                <Switch
-                  size="small"
-                  color="secondary"
-                  checked={draft.tabs[key] === 'visible'}
-                  onChange={(event) => setTab(key, event.target.checked)}
-                  disabled={!canEdit || saving}
-                />
-              }
-              label={key}
-            />
-          ))}
+          {[...catalog.tabs]
+            .sort((a, b) => a.localeCompare(b))
+            .map((key) => (
+              <FormControlLabel
+                key={key}
+                control={
+                  <Switch
+                    size="small"
+                    color="secondary"
+                    checked={draft.tabs[key] === 'visible'}
+                    onChange={(event) => setTab(key, event.target.checked)}
+                    disabled={!canEdit || saving}
+                  />
+                }
+                label={key}
+              />
+            ))}
         </Box>
       </Paper>
 
@@ -283,21 +299,23 @@ const Permisos = () => {
           Acciones (permitida / denegada)
         </Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
-          {[...catalog.actions].sort((a, b) => a.localeCompare(b)).map((key) => (
-            <FormControlLabel
-              key={key}
-              control={
-                <Switch
-                  size="small"
-                  color="secondary"
-                  checked={draft.actions[key] === 'allowed'}
-                  onChange={(event) => setAction(key, event.target.checked)}
-                  disabled={!canEdit || saving}
-                />
-              }
-              label={key}
-            />
-          ))}
+          {[...catalog.actions]
+            .sort((a, b) => a.localeCompare(b))
+            .map((key) => (
+              <FormControlLabel
+                key={key}
+                control={
+                  <Switch
+                    size="small"
+                    color="secondary"
+                    checked={draft.actions[key] === 'allowed'}
+                    onChange={(event) => setAction(key, event.target.checked)}
+                    disabled={!canEdit || saving}
+                  />
+                }
+                label={key}
+              />
+            ))}
         </Box>
       </Paper>
 
@@ -310,28 +328,37 @@ const Permisos = () => {
             Sin datos configurables.
           </Typography>
         ) : (
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 1.5 }}>
-            {[...catalog.fields].sort((a, b) => a.localeCompare(b)).map((key) => (
-              <Box
-                key={key}
-                sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}
-              >
-                <Typography variant="body2">{key}</Typography>
-                <FormControl size="small" sx={{ minWidth: 160 }}>
-                  <Select
-                    value={draft.fields[key] || 'viewable'}
-                    onChange={(event) => setField(key, event.target.value)}
-                    disabled={!canEdit || saving}
-                  >
-                    {FIELD_MODES.map((mode) => (
-                      <MenuItem key={mode} value={mode}>
-                        {mode}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
-            ))}
+          <Box
+            sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 1.5 }}
+          >
+            {[...catalog.fields]
+              .sort((a, b) => a.localeCompare(b))
+              .map((key) => (
+                <Box
+                  key={key}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 2,
+                  }}
+                >
+                  <Typography variant="body2">{key}</Typography>
+                  <FormControl size="small" sx={{ minWidth: 160 }}>
+                    <Select
+                      value={draft.fields[key] || 'viewable'}
+                      onChange={(event) => setField(key, event.target.value)}
+                      disabled={!canEdit || saving}
+                    >
+                      {FIELD_MODES.map((mode) => (
+                        <MenuItem key={mode} value={mode}>
+                          {mode}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Box>
+              ))}
           </Box>
         )}
 

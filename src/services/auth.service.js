@@ -1,39 +1,20 @@
-const MOCK_USER = {
-  id: 'u-bck-001',
-  email: 'admin.lavanguardia@example.com',
-  name: 'Backoffice Admin',
-  // Default roles on login. Switcher overrides at runtime.
-  roles: ['MANAGER'],
-};
+// Adaptador fino sobre el authService del edge-console-sdk (auth real contra Evolok).
+// Lo usan http.js (getAuthToken/logout en el 401) y authSlice (login/logout).
+import { consoleAuthService } from '@/services/console';
 
-// MVP: token is a fake constant. Real auth replaces this with a real session token.
-const FAKE_TOKEN = 'mock-jwt-token-bck-mvp';
-
-const login = async ({ email, password } = {}) => {
-  // Accept anything. In real impl, validate against backend.
-  await new Promise((r) => setTimeout(r, 200)); // simulate latency
-  return { ...MOCK_USER, email: email || MOCK_USER.email };
-};
+// { sessionId, guid, operator, groups } — 2 pasos contra Evolok (ver edge-console-sdk/auth.service.js).
+const login = (email, password) => consoleAuthService.login(email, password);
 
 const logout = async () => {
-  await new Promise((r) => setTimeout(r, 50));
+  consoleAuthService.logout();
   return true;
 };
 
-const getAuthToken = async () => FAKE_TOKEN;
+// sessionId de Evolok de la sesión actual (o null). En Fase 2 http.js lo mandará como ?sessionId=.
+const getAuthToken = () => consoleAuthService.getAuthToken();
 
-// Used by the dev role switcher to surface the list of predefined role-sets.
-export const PREDEFINED_ROLE_SETS = [
-  { label: '[VIEWER]', roles: ['VIEWER'] },
-  { label: '[FINANCE_VIEWER]', roles: ['FINANCE_VIEWER'] },
-  { label: '[FINANCE_EDITOR]', roles: ['FINANCE_EDITOR'] },
-  { label: '[MANAGER]', roles: ['MANAGER'] },
-  { label: '[ADMIN]', roles: ['ADMIN'] },
-  { label: '[STUDENT]', roles: ['STUDENT'] },
-  { label: '[STUDENT, VIEWER]', roles: ['STUDENT', 'VIEWER'] },
-  { label: '[] (no roles)', roles: [] },
-  { label: '[UNKNOWN_ROLE]', roles: ['UNKNOWN_ROLE'] },
-];
+// Rehidratación del authService del SDK desde el snapshot persistido (App.jsx al arrancar).
+const setSession = (snapshot) => consoleAuthService.setSession(snapshot);
 
-const authService = { login, logout, getAuthToken };
+const authService = { login, logout, getAuthToken, setSession };
 export default authService;

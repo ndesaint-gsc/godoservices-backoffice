@@ -3,9 +3,7 @@ import { useSelector } from 'react-redux';
 import { Button, Paper, Typography } from '@mui/material';
 import GroupIcon from '@mui/icons-material/Group';
 import { selectCustomer } from '@/common/features/customer/customerSlice';
-import { useHasPrivilege } from '@/common/permissions/useHasPrivilege';
 import { useActionAllowed } from '@/common/permissions/permissions';
-import { Priv } from '@/common/permissions/privileges';
 import subscriptionsService from '@/services/subscriptions.service';
 import SubscriptionsTable from '@/components/suscripciones/SubscriptionsTable';
 import { useSubscriptions } from '@/components/suscripciones/useSubscriptions';
@@ -18,9 +16,7 @@ const supportsBeneficiaries = (row) => row.corporate || row.hasBeneficiaries;
 const SuscDigitales = () => {
   const customer = useSelector(selectCustomer);
   const guid = customer?.raw?.evUser?.guid;
-  const canRead = useHasPrivilege(Priv.READ_SUSCRIPCIONES);
-  const canEdit = useHasPrivilege(Priv.EDIT_SUSCRIPCIONES);
-  // Gating por ACCIÓN (default-deny) de cada acción de beneficiarios.
+  // Gating por ACCIÓN (default-deny, rol activo) de cada acción de beneficiarios.
   const beneficiaryActions = {
     add: useActionAllowed('suscripciones.beneficiaryAdd'),
     delete: useActionAllowed('suscripciones.beneficiaryDelete'),
@@ -49,7 +45,7 @@ const SuscDigitales = () => {
       label: '',
       align: 'right',
       render: (row) =>
-        canRead && supportsBeneficiaries(row) ? (
+        supportsBeneficiaries(row) ? (
           <Button
             size="small"
             variant="outlined"
@@ -81,7 +77,6 @@ const SuscDigitales = () => {
         onClose={() => setSelected(null)}
         guid={guid}
         subscription={selected}
-        canEdit={canEdit}
         actions={beneficiaryActions}
       />
     </Paper>

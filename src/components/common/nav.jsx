@@ -27,14 +27,23 @@ import Settings from '@mui/icons-material/Settings';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import { NAV_ITEMS } from '@/common/router/nav.config';
-import { useHasPrivilege } from '@/common/permissions/useHasPrivilege';
 import { useTabVisible } from '@/common/permissions/permissions';
 import { selectHasCustomer } from '@/common/features/customer/customerSlice';
 import { useBrandConfig } from '@/common/theme/useBrand';
 
 const DRAWER_WIDTH = 240;
 
-const ICONS = { Home, Person, Subscriptions, Notifications, Receipt, Build, Security, Hub, Settings };
+const ICONS = {
+  Home,
+  Person,
+  Subscriptions,
+  Notifications,
+  Receipt,
+  Build,
+  Security,
+  Hub,
+  Settings,
+};
 
 const itemSx = {
   mx: 1.25,
@@ -77,7 +86,6 @@ const childSx = {
   ml: 1.25,
 };
 
-// A leaf navigation link.
 const NavLeaf = ({ to, label, icon, sx }) => {
   const Icon = icon ? ICONS[icon] : null;
   return (
@@ -94,16 +102,14 @@ const NavLeaf = ({ to, label, icon, sx }) => {
   );
 };
 
-// An expandable group with children. Disabled (dimmed) when it requires a customer
-// and none is loaded.
+// Expandable group; disabled/dimmed when it needs a customer and none is loaded.
 const NavGroup = ({ item, locked }) => {
   const location = useLocation();
   const Icon = ICONS[item.icon];
   const hasActiveChild = item.children.some((child) => location.pathname.startsWith(child.path));
   const [open, setOpen] = useState(hasActiveChild);
 
-  // Cuando un hijo está activo, el padre adopta el color de selección (icono + texto),
-  // aunque el grupo esté plegado, para indicar qué sección contiene la página actual.
+  // A collapsed parent keeps the selection color when a child is active, to mark the current section.
   const parentSx = hasActiveChild
     ? {
         ...itemSx,
@@ -152,15 +158,11 @@ const NavGroup = ({ item, locked }) => {
   );
 };
 
-// One nav entry: resolves privilege + customer gating, then renders leaf or group.
 const NavEntry = ({ item }) => {
-  const visible = useHasPrivilege(item.privilege);
   const tabVisible = useTabVisible(item.tabKey);
   const hasCustomer = useSelector(selectHasCustomer);
 
-  // Items without a privilege (e.g. Inicio) are always visible.
-  if (item.privilege && !visible) return null;
-  // Gating por tab del registry de permisos del backend (tabs[tabKey] !== 'visible' → oculto).
+  // Hidden unless its tab is visible; items without a tabKey (e.g. Inicio) always show.
   if (item.tabKey && !tabVisible) return null;
 
   const locked = item.requiresCustomer && !hasCustomer;
@@ -244,7 +246,12 @@ const Nav = () => {
             sx={{ py: 1 }}
             subheader={
               <ListSubheader
-                sx={{ bgcolor: 'transparent', lineHeight: 2, color: 'text.disabled', fontSize: '0.7rem' }}
+                sx={{
+                  bgcolor: 'transparent',
+                  lineHeight: 2,
+                  color: 'text.disabled',
+                  fontSize: '0.7rem',
+                }}
               >
                 Global · no requiere cliente
               </ListSubheader>

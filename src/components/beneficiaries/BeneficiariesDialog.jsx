@@ -27,29 +27,18 @@ import ImportBeneficiariesForm from './ImportBeneficiariesForm';
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-// Lee errorMessage de un error de http (mensaje "status: {json}") si lo hay.
-const readErrorMessage = (error) => {
-  const rawMessage = error?.message || '';
-  const jsonPart = rawMessage.slice(rawMessage.indexOf('{'));
-  try {
-    return JSON.parse(jsonPart).errorMessage || rawMessage;
-  } catch {
-    return rawMessage;
-  }
-};
-
 // Panel de gestión de beneficiarios de UNA suscripción corporativa/digital.
 // Pestañas: Lista (tabla + borrar), Añadir (form individual), Importar (CSV async),
 // Exportar (pide email, async). Los mensajes de import/export avisan de que el
 // resultado llegará por email. El borrado se confirma vía el ModalProvider global.
-// `actions` = gating por ACCIÓN (default-deny) de cada operación de beneficiarios:
-// { add, delete, import, export }. Cada pestaña/control se combina con `canEdit`.
-const BeneficiariesDialog = ({ open, onClose, guid, subscription, canEdit, actions = {} }) => {
+// `actions` = gating por ACCIÓN (default-deny, rol activo) de cada operación de beneficiarios:
+// { add, delete, import, export }. Cada control se rige por su propia acción.
+const BeneficiariesDialog = ({ open, onClose, guid, subscription, actions = {} }) => {
   const { enqueueSnackbar } = useSnackbar();
   const modal = useContext(ModalContext);
-  const canAdd = canEdit && !!actions.add;
-  const canDelete = canEdit && !!actions.delete;
-  const canImport = canEdit && !!actions.import;
+  const canAdd = !!actions.add;
+  const canDelete = !!actions.delete;
+  const canImport = !!actions.import;
   const canExport = !!actions.export;
   const [tab, setTab] = useState('list');
   const [exportEmail, setExportEmail] = useState('');
@@ -67,7 +56,7 @@ const BeneficiariesDialog = ({ open, onClose, guid, subscription, canEdit, actio
       enqueueSnackbar('Beneficiario añadido correctamente.', { variant: 'success' });
       await reload();
     } catch (error) {
-      enqueueSnackbar('Error al añadir el beneficiario: ' + readErrorMessage(error), {
+      enqueueSnackbar('Error al añadir el beneficiario: ' + error.message, {
         variant: 'error',
       });
     }
@@ -85,7 +74,7 @@ const BeneficiariesDialog = ({ open, onClose, guid, subscription, canEdit, actio
           enqueueSnackbar('Beneficiario eliminado correctamente.', { variant: 'success' });
           await reload();
         } catch (error) {
-          enqueueSnackbar('Error al eliminar el beneficiario: ' + readErrorMessage(error), {
+          enqueueSnackbar('Error al eliminar el beneficiario: ' + error.message, {
             variant: 'error',
           });
         }
@@ -96,14 +85,13 @@ const BeneficiariesDialog = ({ open, onClose, guid, subscription, canEdit, actio
   const handleImport = async (payload) => {
     try {
       await beneficiariesService.importFile(guid, payload);
-      enqueueSnackbar(
-        'Petición de importación enviada. El resultado se enviará por email.',
-        { variant: 'success' },
-      );
+      enqueueSnackbar('Petición de importación enviada. El resultado se enviará por email.', {
+        variant: 'success',
+      });
       // El alta es asíncrona; recargamos por si algunos ya se reflejan.
       await reload();
     } catch (error) {
-      enqueueSnackbar('Error al importar el fichero: ' + readErrorMessage(error), {
+      enqueueSnackbar('Error al importar el fichero: ' + error.message, {
         variant: 'error',
       });
     }
@@ -116,13 +104,12 @@ const BeneficiariesDialog = ({ open, onClose, guid, subscription, canEdit, actio
     setExporting(true);
     try {
       await beneficiariesService.exportFile(guid, { subscriptionId, email });
-      enqueueSnackbar(
-        'Petición de exportación enviada. El fichero se enviará por email.',
-        { variant: 'success' },
-      );
+      enqueueSnackbar('Petición de exportación enviada. El fichero se enviará por email.', {
+        variant: 'success',
+      });
       setExportEmail('');
     } catch (error) {
-      enqueueSnackbar('Error al exportar la lista: ' + readErrorMessage(error), {
+      enqueueSnackbar('Error al exportar la lista: ' + error.message, {
         variant: 'error',
       });
     } finally {
@@ -211,10 +198,14 @@ const BeneficiariesDialog = ({ open, onClose, guid, subscription, canEdit, actio
         {tab === 'export' && canExport && (
           <Box component="form" onSubmit={handleExport} sx={{ pt: 1 }}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Genera la lista de beneficiarios. El proceso es asíncrono: el fichero se
-              enviará por email.
+              Genera la lista de beneficiarios. El proceso es asíncrono: el fichero se enviará por
+              email.
             </Typography>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }}>
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={2}
+              alignItems={{ sm: 'center' }}
+            >
               <TextField
                 label="Email para el fichero"
                 type="email"

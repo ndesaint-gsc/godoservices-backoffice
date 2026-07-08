@@ -33,16 +33,17 @@ El grupo Evolok resultante es `{product}-{appconsole}-{ROLENAME}` (god: `{produc
 No hay límite declarado en el código; el tope real lo impone el tenant Evolok. Se fija uno **conservador**
 (`ConsoleNaming`, web-core) y se derivan los sublímites — validado en backend (400) y en el front (UX):
 
-| id | máx | charset |
-|----|-----|---------|
-| `product` | 15 | `[a-z0-9]` (sin `-`) |
-| `appconsole` (console) | 15 | `[a-z0-9]` (sin `-`) |
-| `rolename` | 32 | `[A-Za-z0-9_]` (→ MAYÚSCULAS) |
+| id                     | máx    | charset                             |
+| ---------------------- | ------ | ----------------------------------- |
+| `product`              | 15     | `[a-z0-9]` (sin `-`)                |
+| `appconsole` (console) | 15     | `[a-z0-9]` (sin `-`)                |
+| `rolename`             | 32     | `[A-Za-z0-9_]` (→ MAYÚSCULAS)       |
 | **grupo Evolok total** | **64** | `{product}-{appconsole}-{ROLENAME}` |
 
 ### Rol god (por consola)
 
 Cada consola tiene un administrador **god**: grupo Evolok `{consoleId}-god` → rol pelado **`GOD`**.
+
 - **Acceso TOTAL** garantizado (special-case del motor): siempre ve/puede todo — tabs, acciones, fields
   y el admin de roles/privilegios — **sin depender del mapa** de privilegios.
 - Se le asigna un **email** (`godEmail`) en el alta de la consola.
@@ -60,6 +61,7 @@ enforcement (sesión Evolok del operador). Vive en la consola mentor (godoservic
 ## Backend — plano ADMIN `…/admin/**` (apikey)
 
 ### Roles (nombre SIN prefijo de cara al PO; el backend pone el grupo Evolok)
+
 ```
 GET    …/admin/roles                         -> { "roles": [ { "name":"EDITOR", "prefixedName":"welcome-console-EDITOR", "description":"…" } ] }
 POST   …/admin/roles     { "name", "description" }   -> 201 { name, prefixedName, description }   (description OBLIGATORIA → 400 si falta)
@@ -68,11 +70,13 @@ DELETE …/admin/roles/{name}                          -> 204
 ```
 
 ### Membresías de rol (usuarios asignados al grupo Evolok, con ventana opcional)
+
 ```
 GET    …/admin/roles/{name}/members                          -> { "members": [ { email, role, group, startDate, endDate } ] }
 POST   …/admin/roles/{name}/members  { email, startDate?, endDate? }  -> { email, role, group, startDate, endDate }   (email OBLIGATORIO; fechas ISO opcionales, null = sin límite)
 DELETE …/admin/roles/{name}/members?email=…                  -> 204
 ```
+
 Asigna/quita un usuario (email) al **grupo Evolok** del rol (`{consoleId}-{ROL}`), con fechas de
 inicio/fin opcionales. Va por el seam `ConsoleRoleProvider` (impl por convenio hoy; la impl Evolok real
 creará la membresía temporal en Evolok). No altera el catálogo/privilegios (la membresía es de Evolok).
@@ -81,6 +85,7 @@ creará la membresía temporal en Evolok). No altera el catálogo/privilegios (l
 > devuelven **400** (no creable/editable/borrable por la consola; el god siempre conserva acceso total).
 
 ### Privilegios (mapa role→privilegios)
+
 ```
 GET    …/admin/privileges                    -> { "permissions": { "<role>": { tabs, actions, fields } } }
 PUT    …/admin/privileges/{role}   { tabs, actions, fields }   -> 200
@@ -88,12 +93,15 @@ DELETE …/admin/privileges/{role}                               -> 204
 ```
 
 ### Catálogo (universo de claves de la consola)
+
 ```
 GET    …/admin/catalog   -> { roles, tabs, actions, fields }
 PUT    …/admin/catalog   { tabs, actions, fields }   -> 200
 ```
+
 El catálogo define **qué tabs/acciones/datos** existen en la consola; es lo que pinta la vista de
 **Permisos** (y lo edita el god desde la vista de **Configuración**). Reglas:
+
 - **Sin duplicados** en tabs, acciones ni datos (dedup en backend).
 - **Tabs/acciones reservadas** siempre presentes y **no borrables**: tabs `permisos` + `configuracion`,
   acciones `permisos.edit` + `configuracion.view`. Toda consola tiene SIEMPRE su vista de permisos
@@ -104,6 +112,7 @@ El catálogo define **qué tabs/acciones/datos** existen en la consola; es lo qu
 - En la vista de Permisos las tres dimensiones se listan **por orden alfabético**, en **2 columnas**.
 
 ### Editor de permisos (payload del editor; plano admin)
+
 ```
 GET    …/admin/permissions                   -> { roles, tabs, actions, fields, permissions }   (payload del editor)
 ```
@@ -134,6 +143,7 @@ Defaults front: tabs optimista-visible hasta cargar; actions default-deny; field
 
 Las operaciones de una consola (p.ej. bajo `/perfil/console/**` en welcome/console) se anotan con
 `@ConsolePrivilege("tab.action")`. El `ConsolePrivilegeInterceptor`:
+
 - resuelve los roles del operador **contra Evolok** (valida `ev_gg_bo`, saca grupos, quita prefijo) —
   con caché LRU+TTL corto (`ConsoleRolesCache`, seam; default in-memory) para no llamar a Evolok en
   cada operación;
@@ -192,20 +202,20 @@ GET    …/consoles/mine?app=    (configuracion.view)   -> { consoleId, product,
 El paquete `edge-console-sdk` expone **dos factories** que comparten núcleo (`client`/`keys`/`verify`),
 para separar lo que se entrega a un tercero de la administración de la consola mentor:
 
-| SDK | Factory | Import | Para | Backend | Auth |
-|-----|---------|--------|------|---------|------|
-| **edge-console-sdk** (consumidor) | `createConsole` | `@/edge-console-sdk` | terceros: consumir auth/roles/privilegios | `…/client/**` | apikey producto (proxy) |
-| **edge-console-administrator** (admin) | `createConsoleAdmin` | `@/edge-console-administrator` | godoservices (mentor): administrar consolas | `…/admin/**` + `…/consoles/**` | apikey / sesión |
+| SDK                                    | Factory              | Import                         | Para                                        | Backend                        | Auth                    |
+| -------------------------------------- | -------------------- | ------------------------------ | ------------------------------------------- | ------------------------------ | ----------------------- |
+| **edge-console-sdk** (consumidor)      | `createConsole`      | `@/edge-console-sdk`           | terceros: consumir auth/roles/privilegios   | `…/client/**`                  | apikey producto (proxy) |
+| **edge-console-administrator** (admin) | `createConsoleAdmin` | `@/edge-console-administrator` | godoservices (mentor): administrar consolas | `…/admin/**` + `…/consoles/**` | apikey / sesión         |
 
 **Permisos en ambos**: el consumidor los **lee/verifica** (`resolve` + `verify`); el admin los **define**
 (`savePermissions`/`catalog`). Mismo `keys.js` → un único modelo (`Tab`/`Action`/`Naming`/`RESERVED_*`).
 
 ```js
 // --- edge-console-sdk (CONSUMIDOR / tercero) ---
-const sdk = createConsole({ consoleId: 'welcome-console', getEvolokSession });   // getEvolokSession = IC web
-const { operator, roles } = await sdk.auth.getOperator();      // Evolok directo; prefijo ya quitado
-const permissions = await sdk.privileges.resolve(roles);       // mapa fusionado (backend …/client/**)
-sdk.verify.actionAllowed(permissions, 'datos.delete');         // puro, sobre el snapshot
+const sdk = createConsole({ consoleId: 'welcome-console', getEvolokSession }); // getEvolokSession = IC web
+const { operator, roles } = await sdk.auth.getOperator(); // Evolok directo; prefijo ya quitado
+const permissions = await sdk.privileges.resolve(roles); // mapa fusionado (backend …/client/**)
+sdk.verify.actionAllowed(permissions, 'datos.delete'); // puro, sobre el snapshot
 
 // --- edge-console-administrator (ADMINISTRACIÓN / mentor) ---
 import { createConsoleAdmin } from '@/edge-console-administrator';
@@ -213,14 +223,14 @@ const admin = createConsoleAdmin({ consoleId: 'welcome-console' });
 // admin de roles/privilegios + catálogo (apikey vía proxy):
 await admin.admin.roles.create('editor', 'Editor de contenidos');
 await admin.admin.savePermissions('EDITOR', { tabs, actions, fields });
-const catalog = await admin.admin.catalog.get();               // { roles, tabs, actions, fields }
-await admin.admin.catalog.set({ tabs, actions, fields });      // define el catálogo (sin dups; reservadas fijas)
+const catalog = await admin.admin.catalog.get(); // { roles, tabs, actions, fields }
+await admin.admin.catalog.set({ tabs, actions, fields }); // define el catálogo (sin dups; reservadas fijas)
 // admin de consolas de la plataforma + config técnica del god (enforcement por sesión):
 const list = await admin.consoles.list();
 const created = await admin.consoles.create('running', 'console', 'god@grupogodo.com'); // created.apiKey (una vez)
 await admin.consoles.update('running-console', { product, console, godEmail, apiKey }); // god edita todo
 await admin.consoles.remove('running-console');
-const myConfig = await admin.consoles.mine();  // { consoleId, rolePrefix, godGroup, apiKey, … }
+const myConfig = await admin.consoles.mine(); // { consoleId, rolePrefix, godGroup, apiKey, … }
 ```
 
 ## Backend — clases (web-core `com.grupogodo.edge.console`)

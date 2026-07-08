@@ -3,19 +3,17 @@ import { useSelector } from 'react-redux';
 import { CircularProgress } from '@mui/material';
 import { useSnackbar } from 'notistack';
 import { useEffect, useRef } from 'react';
-import { useHasPrivilege } from '@/common/permissions/useHasPrivilege';
-import { getLandingRoute } from '@/common/router/getLandingRoute';
-import { selectHasCustomer } from '@/common/features/customer/customerSlice';
+import { useTabVisible } from '@/common/permissions/permissions';
 
-const AuthenticatedRoute = ({ children, requiredPrivilege }) => {
+// Requires auth and, if `requiredTab` is set, that tab visible for the active role. Denied → home.
+const AuthenticatedRoute = ({ children, requiredTab }) => {
   const location = useLocation();
   const { enqueueSnackbar } = useSnackbar();
-  const { isAuthenticated, isLoading, user } = useSelector((state) => state.auth);
-  const hasCustomer = useSelector(selectHasCustomer);
-  const allowed = useHasPrivilege(requiredPrivilege);
+  const { isAuthenticated, isLoading } = useSelector((state) => state.auth);
+  const tabVisible = useTabVisible(requiredTab);
   const notifiedRef = useRef(false);
 
-  const shouldDeny = isAuthenticated && requiredPrivilege && !allowed;
+  const shouldDeny = isAuthenticated && requiredTab && !tabVisible;
 
   useEffect(() => {
     if (shouldDeny && !notifiedRef.current) {
@@ -33,7 +31,7 @@ const AuthenticatedRoute = ({ children, requiredPrivilege }) => {
   }
 
   if (shouldDeny) {
-    return <Navigate to={getLandingRoute(user?.roles, hasCustomer)} replace />;
+    return <Navigate to="/" replace />;
   }
 
   return children;

@@ -73,9 +73,7 @@ const RecalculateInvoiceDialog = ({ open, transactionId, onClose, onConfirm }) =
   const updateLine = (index, field) => (event) => {
     const { value } = event.target;
     setLines((previous) =>
-      previous.map((line, lineIndex) =>
-        lineIndex === index ? { ...line, [field]: value } : line,
-      ),
+      previous.map((line, lineIndex) => (lineIndex === index ? { ...line, [field]: value } : line)),
     );
   };
 

@@ -32,32 +32,55 @@ export const buildInvoiceActions = (invoice, handlers) => {
     if (!actions.some((action) => action.key === key)) actions.push({ key, label, onClick, perm });
   };
 
-  if (invoice.downloadAction) addAction('download', 'Descargar', () => handlers.onDownload(invoice, false));
+  if (invoice.downloadAction)
+    addAction('download', 'Descargar', () => handlers.onDownload(invoice, false));
 
   if (invoice.state === 'PAID' && !invoice.corporate) {
-    if (!invoice.downloadAction) addAction('download', 'Descargar', () => handlers.onDownload(invoice, false));
+    if (!invoice.downloadAction)
+      addAction('download', 'Descargar', () => handlers.onDownload(invoice, false));
     if (invoice.downloadForceOption) {
       addAction('regenerate', 'Regenerar factura', () => handlers.onDownload(invoice, true));
     }
     if (invoice.transactionType !== 'REFUND') {
       if (invoice.type === 'SIMPLIFIED') {
-        addAction('complete', 'Generar factura completa', () => handlers.onSubstitute(invoice), 'facturacion.substitute');
+        addAction(
+          'complete',
+          'Generar factura completa',
+          () => handlers.onSubstitute(invoice),
+          'facturacion.substitute',
+        );
       } else if (['COMPLETE', 'RECTIFICATION', 'SUBSTITUTIVE'].includes(invoice.type)) {
-        addAction('rectify', 'Cambiar datos fiscales', () => handlers.onRectify(invoice), 'facturacion.rectify');
+        addAction(
+          'rectify',
+          'Cambiar datos fiscales',
+          () => handlers.onRectify(invoice),
+          'facturacion.rectify',
+        );
       }
     }
   }
 
   if (invoice.corporate && invoice.state === 'PENDING') {
-    if (!invoice.downloadAction) addAction('download', 'Descargar', () => handlers.onDownload(invoice, false));
+    if (!invoice.downloadAction)
+      addAction('download', 'Descargar', () => handlers.onDownload(invoice, false));
     if (invoice.downloadForceOption) {
       addAction('regenerate', 'Regenerar factura', () => handlers.onDownload(invoice, true));
     }
     if (['COMPLETE', 'RECTIFICATION'].includes(invoice.type)) {
-      addAction('rectify', 'Cambiar datos fiscales', () => handlers.onRectify(invoice), 'facturacion.rectify');
+      addAction(
+        'rectify',
+        'Cambiar datos fiscales',
+        () => handlers.onRectify(invoice),
+        'facturacion.rectify',
+      );
     }
     if (['CORPORATE', 'EMPRESALV', 'EMPLV_RECTI', 'CORP_RECTI'].includes(invoice.transactionType)) {
-      addAction('negative', 'Generar abono', () => handlers.onNegative(invoice), 'facturacion.negative');
+      addAction(
+        'negative',
+        'Generar abono',
+        () => handlers.onNegative(invoice),
+        'facturacion.negative',
+      );
     }
   }
 
@@ -65,7 +88,12 @@ export const buildInvoiceActions = (invoice, handlers) => {
     !invoice.recalculateInvoiceAction &&
     (invoice.invoiceId?.includes('FS') || invoice.invoiceId?.includes('FO'))
   ) {
-    addAction('recalculate', 'Recalcular factura', () => handlers.onRecalculate(invoice), 'facturacion.recalculate');
+    addAction(
+      'recalculate',
+      'Recalcular factura',
+      () => handlers.onRecalculate(invoice),
+      'facturacion.recalculate',
+    );
     if (!invoice.downloadForceOption) {
       addAction('regenerate', 'Regenerar factura', () => handlers.onDownload(invoice, true));
     }

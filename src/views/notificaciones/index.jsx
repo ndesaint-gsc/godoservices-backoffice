@@ -15,9 +15,7 @@ import {
 } from '@mui/material';
 import { useSnackbar } from 'notistack';
 import { patchEvUser, selectCustomer } from '@/common/features/customer/customerSlice';
-import { useHasPrivilege } from '@/common/permissions/useHasPrivilege';
 import { useActionAllowed } from '@/common/permissions/permissions';
-import { Priv } from '@/common/permissions/privileges';
 import { sortByText } from '@/common/sort';
 import notificationsService from '@/services/notifications.service';
 
@@ -37,24 +35,11 @@ const toBoolean = (value) => value === true || value === 'true';
 // evUser guarda newsletters/intereses como ids separados por '|'.
 const splitIds = (value) => (value ? String(value).split('|').filter(Boolean) : []);
 
-const readErrorMessage = (error) => {
-  const rawMessage = error?.message || '';
-  const jsonPart = rawMessage.slice(rawMessage.indexOf('{'));
-  try {
-    const parsed = JSON.parse(jsonPart);
-    if (parsed.validationErrors?.length) {
-      return parsed.validationErrors
-        .map((validationError) => `${validationError.field}: ${validationError.message}`)
-        .join('; ');
-    }
-    return parsed.errorMessage || rawMessage;
-  } catch {
-    return rawMessage;
-  }
-};
-
 const buildInitialOptIns = (evUser) =>
-  OPT_INS.reduce((optIns, optIn) => ({ ...optIns, [optIn.name]: toBoolean(evUser?.[optIn.name]) }), {});
+  OPT_INS.reduce(
+    (optIns, optIn) => ({ ...optIns, [optIn.name]: toBoolean(evUser?.[optIn.name]) }),
+    {},
+  );
 
 const sameIdSet = (firstIds, secondIds) =>
   firstIds.length === secondIds.length &&
@@ -88,7 +73,9 @@ const CatalogCheckboxes = ({ catalog, selectedIds, onToggle, disabled, emptyText
     );
   }
   return (
-    <FormGroup sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' } }}>
+    <FormGroup
+      sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' } }}
+    >
       {catalog.map((item) => (
         <FormControlLabel
           key={item.id}
@@ -112,8 +99,7 @@ const Notificaciones = () => {
   const dispatch = useDispatch();
   const { enqueueSnackbar } = useSnackbar();
   const customer = useSelector(selectCustomer);
-  const canEdit = useHasPrivilege(Priv.EDIT_NOTIFICACIONES);
-  // Gating por ACCIÓN (default-deny): opt-ins y catálogo (newsletters/intereses) por separado.
+  // Gating por ACCIÓN (default-deny, rol activo): opt-ins y catálogo (newsletters/intereses) por separado.
   const canEditOptins = useActionAllowed('notificaciones.editOptins');
   const canEditCatalog = useActionAllowed('notificaciones.editCatalog');
 
@@ -156,12 +142,18 @@ const Notificaciones = () => {
         if (!active) return;
         // El backend devuelve listas planas (ya deduplicadas). Las usamos directas.
         const allInterests = Array.isArray(interests) ? interests : [];
-        setNewslettersCatalog(sortByText(Array.isArray(newsletters) ? newsletters : [], catalogText));
+        setNewslettersCatalog(
+          sortByText(Array.isArray(newsletters) ? newsletters : [], catalogText),
+        );
         setGeneralInterestsCatalog(
-          sortByText(allInterests.filter((item) => item.category == null), catalogText),
+          sortByText(
+            allInterests.filter((item) => item.category == null),
+            catalogText,
+          ),
         );
       } catch (error) {
-        if (active) enqueueSnackbar('No se pudo cargar el catálogo: ' + readErrorMessage(error), { variant: 'error' });
+        if (active)
+          enqueueSnackbar('No se pudo cargar el catálogo: ' + error.message, { variant: 'error' });
       } finally {
         if (active) setCatalogLoading(false);
       }
@@ -190,7 +182,10 @@ const Notificaciones = () => {
       enqueueSnackbar('No hay cambios que guardar', { variant: 'info' });
       return;
     }
-    const attributes = changedOptIns.map((optIn) => ({ name: optIn.name, value: optIns[optIn.name] }));
+    const attributes = changedOptIns.map((optIn) => ({
+      name: optIn.name,
+      value: optIns[optIn.name],
+    }));
     setSaving(true);
     try {
       await notificationsService.updateAttributes(evUser.guid, attributes);
@@ -200,7 +195,7 @@ const Notificaciones = () => {
       dispatch(patchEvUser(savedValues));
       enqueueSnackbar('Notificaciones actualizadas', { variant: 'success' });
     } catch (error) {
-      enqueueSnackbar('Error al guardar: ' + readErrorMessage(error), { variant: 'error' });
+      enqueueSnackbar('Error al guardar: ' + error.message, { variant: 'error' });
     } finally {
       setSaving(false);
     }
@@ -231,7 +226,7 @@ const Notificaciones = () => {
       );
       enqueueSnackbar('Newsletters e intereses actualizados', { variant: 'success' });
     } catch (error) {
-      enqueueSnackbar('Error al guardar: ' + readErrorMessage(error), { variant: 'error' });
+      enqueueSnackbar('Error al guardar: ' + error.message, { variant: 'error' });
     } finally {
       setSavingCatalog(false);
     }
@@ -251,7 +246,7 @@ const Notificaciones = () => {
         <Typography variant="h6" sx={{ mt: 0.25, mb: 1 }}>
           Permisos de comunicación
         </Typography>
-        {!canEdit && (
+        {!canEditOptins && (
           <Typography variant="caption" color="text.secondary">
             Modo lectura. No tienes permiso para editar.
           </Typography>
@@ -264,7 +259,7 @@ const Notificaciones = () => {
                 <Switch
                   checked={!!optIns[optIn.name]}
                   onChange={handleToggle(optIn.name)}
-                  disabled={!canEdit || saving}
+                  disabled={!canEditOptins || saving}
                   color="secondary"
                 />
               }
@@ -272,7 +267,7 @@ const Notificaciones = () => {
             />
           ))}
         </Stack>
-        {canEdit && (
+        {canEditOptins && (
           <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
             <Button
               variant="contained"
@@ -301,7 +296,7 @@ const Notificaciones = () => {
             catalog={newslettersCatalog}
             selectedIds={selectedNewsletters}
             onToggle={toggleId(setSelectedNewsletters)}
-            disabled={!canEdit || savingCatalog}
+            disabled={!canEditCatalog || savingCatalog}
             emptyText="No hay catálogo de newsletters disponible."
           />
         )}
@@ -319,7 +314,7 @@ const Notificaciones = () => {
             catalog={generalInterestsCatalog}
             selectedIds={selectedGenInterests}
             onToggle={toggleId(setSelectedGenInterests)}
-            disabled={!canEdit || savingCatalog}
+            disabled={!canEditCatalog || savingCatalog}
             emptyText="No hay catálogo de intereses generales disponible."
           />
         )}
@@ -329,11 +324,11 @@ const Notificaciones = () => {
         </Typography>
         <SubscriptionChips items={editorialInterests} emptyText="Sin intereses editoriales." />
         <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-          Solo lectura: el dato leído (interests_editorial) no coincide con el atributo que
-          edita el backoffice antiguo (sportInterests); pendiente de unificar para edición segura.
+          Solo lectura: el dato leído (interests_editorial) no coincide con el atributo que edita el
+          backoffice antiguo (sportInterests); pendiente de unificar para edición segura.
         </Typography>
 
-        {canEdit && (
+        {canEditCatalog && (
           <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
             <Button
               variant="contained"

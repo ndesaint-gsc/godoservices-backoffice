@@ -47,9 +47,5 @@ export default function ModalProvider({ children }) {
     },
   };
 
-  return (
-    <ModalContext.Provider value={contextValue}>
-      {children}
-    </ModalContext.Provider>
-  );
+  return <ModalContext.Provider value={contextValue}>{children}</ModalContext.Provider>;
 }

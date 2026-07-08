@@ -3,9 +3,7 @@ import { useSelector } from 'react-redux';
 import { Paper, Stack, Typography } from '@mui/material';
 import { useSnackbar } from 'notistack';
 import { selectCustomer } from '@/common/features/customer/customerSlice';
-import { useHasPrivilege } from '@/common/permissions/useHasPrivilege';
 import { useActionAllowed, useFieldMode } from '@/common/permissions/permissions';
-import { Priv } from '@/common/permissions/privileges';
 import billingService from '@/services/billing.service';
 import FiscalAddressCard from '@/components/facturacion/FiscalAddressCard';
 import FiscalAddressDialog from '@/components/facturacion/FiscalAddressDialog';
@@ -15,8 +13,7 @@ import RecalculateInvoiceDialog from '@/components/facturacion/RecalculateInvoic
 const Facturacion = () => {
   const { enqueueSnackbar } = useSnackbar();
   const customer = useSelector(selectCustomer);
-  const canEdit = useHasPrivilege(Priv.EDIT_FACTURACION);
-  // Gating por acción del registry de permisos del backend.
+  // Gating por acción del registry de permisos del backend (rol activo).
   const canSubstitute = useActionAllowed('facturacion.substitute');
   const canRectify = useActionAllowed('facturacion.rectify');
   const canNegative = useActionAllowed('facturacion.negative');
@@ -79,8 +76,7 @@ const Facturacion = () => {
 
   // substitute / rectify / negative: open the fiscal-data popup; the actual
   // generate call runs after the fiscal data is saved (see onFiscalConfirm).
-  const openFiscalDialog = (invoice, request) =>
-    setFiscalDialog({ open: true, invoice, request });
+  const openFiscalDialog = (invoice, request) => setFiscalDialog({ open: true, invoice, request });
   const closeFiscalDialog = () => setFiscalDialog((previous) => ({ ...previous, open: false }));
 
   // Runs once the dialog has saved the fiscal data: generate the document with
@@ -133,9 +129,15 @@ const Facturacion = () => {
 
   const invoiceHandlers = {
     onDownload: downloadInvoice,
-    onSubstitute: guardAction(canSubstitute, (invoice) => openFiscalDialog(invoice, billingService.substitute)),
-    onRectify: guardAction(canRectify, (invoice) => openFiscalDialog(invoice, billingService.rectify)),
-    onNegative: guardAction(canNegative, (invoice) => openFiscalDialog(invoice, billingService.negative)),
+    onSubstitute: guardAction(canSubstitute, (invoice) =>
+      openFiscalDialog(invoice, billingService.substitute),
+    ),
+    onRectify: guardAction(canRectify, (invoice) =>
+      openFiscalDialog(invoice, billingService.rectify),
+    ),
+    onNegative: guardAction(canNegative, (invoice) =>
+      openFiscalDialog(invoice, billingService.negative),
+    ),
     onRecalculate: guardAction(canRecalculate, openRecalculateDialog),
   };
 
@@ -146,7 +148,7 @@ const Facturacion = () => {
       {fiscalAddressMode !== 'hidden' && (
         <FiscalAddressCard
           evUser={evUser}
-          canEdit={canEdit && canFiscalEdit && fiscalAddressMode === 'editable'}
+          canEdit={canFiscalEdit && fiscalAddressMode === 'editable'}
           guid={guid}
         />
       )}
@@ -162,7 +164,6 @@ const Facturacion = () => {
         <InvoicesTable
           invoices={invoices}
           loading={loading}
-          canEdit={canEdit}
           runningAction={runningAction}
           handlers={invoiceHandlers}
           actionAllowed={invoiceActionAllowed}

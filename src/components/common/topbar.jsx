@@ -20,8 +20,7 @@ import AccountCircle from '@mui/icons-material/AccountCircle';
 import LogoutIcon from '@mui/icons-material/Logout';
 import CheckIcon from '@mui/icons-material/Check';
 import { useSnackbar } from 'notistack';
-import { logout, setRoles, loadPermissions } from '@/common/features/auth/authSlice';
-import { PREDEFINED_ROLE_SETS } from '@/services/auth.service';
+import { logout, loadPermissions } from '@/common/features/auth/authSlice';
 import {
   clearCustomer,
   selectCustomer,
@@ -30,16 +29,12 @@ import {
 } from '@/common/features/customer/customerSlice';
 import userService from '@/services/user.service';
 
-const IS_DEV = import.meta.env.DEV;
-
 const CUSTOMER_SCOPED_PATHS = ['/datos', '/suscripciones', '/notificaciones', '/facturacion'];
 
 const isCustomerScoped = (pathname) =>
-  CUSTOMER_SCOPED_PATHS.some((basePath) => pathname === basePath || pathname.startsWith(basePath + '/'));
-
-const sameRoles = (firstRoles = [], secondRoles = []) =>
-  firstRoles.length === secondRoles.length &&
-  [...firstRoles].sort().join('|') === [...secondRoles].sort().join('|');
+  CUSTOMER_SCOPED_PATHS.some(
+    (basePath) => pathname === basePath || pathname.startsWith(basePath + '/'),
+  );
 
 const getInitials = (fullName = '') =>
   fullName
@@ -56,6 +51,8 @@ const Topbar = () => {
   const { enqueueSnackbar } = useSnackbar();
   const operator = useSelector((state) => state.auth.user);
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+  const availableRoles = useSelector((state) => state.auth.availableRoles) || [];
+  const activeRole = useSelector((state) => state.auth.role);
   const customer = useSelector(selectCustomer);
   const hasCustomer = useSelector(selectHasCustomer);
   const [menuAnchor, setMenuAnchor] = useState(null);
@@ -68,8 +65,7 @@ const Topbar = () => {
   const openMenu = (event) => setMenuAnchor(event.currentTarget);
   const closeMenu = () => setMenuAnchor(null);
 
-  const operatorRoles = operator?.roles || [];
-  const rolesLabel = operatorRoles.length ? operatorRoles.join(', ') : '(sin roles)';
+  const rolesLabel = activeRole || '(sin roles)';
 
   const handleSearch = async (event) => {
     event.preventDefault();
@@ -101,10 +97,8 @@ const Topbar = () => {
     }
   };
 
-  const handlePickRoles = (roles) => {
-    dispatch(setRoles(roles));
-    // DEV: recarga permisos reales del backend para el rol primario seleccionado.
-    dispatch(loadPermissions(roles[0]));
+  const handlePickRole = (role) => {
+    if (role !== activeRole) dispatch(loadPermissions(role));
     closeMenu();
   };
 
@@ -154,7 +148,14 @@ const Topbar = () => {
               </Avatar>
             }
             label={
-              <Box sx={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15, overflow: 'hidden' }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  lineHeight: 1.15,
+                  overflow: 'hidden',
+                }}
+              >
                 <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
                   {customer.displayName || customer.email}
                 </Typography>
@@ -167,7 +168,11 @@ const Topbar = () => {
             }
             onDelete={handleClearCustomer}
             variant="outlined"
-            sx={{ maxWidth: 280, height: 'auto', '& .MuiChip-label': { py: 0.5, display: 'block' } }}
+            sx={{
+              maxWidth: 280,
+              height: 'auto',
+              '& .MuiChip-label': { py: 0.5, display: 'block' },
+            }}
           />
         )}
 
@@ -179,7 +184,12 @@ const Topbar = () => {
             {rolesLabel}
           </Typography>
         </Box>
-        <IconButton aria-label="Cuenta" onClick={openMenu} size="large" sx={{ color: 'primary.main' }}>
+        <IconButton
+          aria-label="Cuenta"
+          onClick={openMenu}
+          size="large"
+          sx={{ color: 'primary.main' }}
+        >
           <AccountCircle fontSize="large" />
         </IconButton>
         <Menu
@@ -195,30 +205,25 @@ const Topbar = () => {
               {operator?.name || operator?.email || 'Usuario'}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Roles: {rolesLabel}
+              Rol activo: {rolesLabel}
             </Typography>
           </ListSubheader>
 
-          {IS_DEV && <Divider />}
-          {IS_DEV && (
+          {availableRoles.length > 1 && <Divider />}
+          {availableRoles.length > 1 && (
             <ListSubheader sx={{ bgcolor: 'transparent', fontSize: '0.7rem' }}>
-              Cambiar roles (dev)
+              Cambiar de rol
             </ListSubheader>
           )}
-          {IS_DEV &&
-            PREDEFINED_ROLE_SETS.map((roleSet) => {
-              const selected = sameRoles(roleSet.roles, operatorRoles);
+          {availableRoles.length > 1 &&
+            availableRoles.map((role) => {
+              const selected = role === activeRole;
               return (
-                <MenuItem
-                  key={roleSet.label}
-                  onClick={() => handlePickRoles(roleSet.roles)}
-                  selected={selected}
-                  dense
-                >
+                <MenuItem key={role} onClick={() => handlePickRole(role)} selected={selected} dense>
                   <ListItemIcon sx={{ minWidth: 28 }}>
                     {selected && <CheckIcon fontSize="small" color="primary" />}
                   </ListItemIcon>
-                  {roleSet.label}
+                  {role}
                 </MenuItem>
               );
             })}

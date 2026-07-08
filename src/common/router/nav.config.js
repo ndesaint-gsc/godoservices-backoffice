@@ -1,8 +1,6 @@
-import { Priv } from '@/common/permissions/privileges';
-
 // Flat items have `path`. Group items have `children` (leaf paths) and toggle expansion.
-// `privilege` gates visibility (READ_*). `requiresCustomer` dims/locks until a customer is loaded.
-// `tabKey` = clave de tab del registry de permisos del backend (visible/hidden por rol).
+// `tabKey` = clave de tab del registry de permisos del backend (visible/hidden por ROL ACTIVO): es lo
+// único que gatea la visibilidad. `requiresCustomer` dims/locks until a customer is loaded.
 export const NAV_ITEMS = [
   { path: '/', label: 'Inicio', icon: 'Home' },
   {
@@ -10,14 +8,12 @@ export const NAV_ITEMS = [
     label: 'Datos',
     icon: 'Person',
     tabKey: 'datos',
-    privilege: Priv.READ_DATOS,
     requiresCustomer: true,
   },
   {
     label: 'Suscripciones',
     icon: 'Subscriptions',
     tabKey: 'suscripciones',
-    privilege: Priv.READ_SUSCRIPCIONES,
     requiresCustomer: true,
     children: [
       { path: '/suscripciones/digitales', label: 'Digitales' },
@@ -32,7 +28,6 @@ export const NAV_ITEMS = [
     label: 'Notificaciones',
     icon: 'Notifications',
     tabKey: 'notificaciones',
-    privilege: Priv.READ_NOTIFICACIONES,
     requiresCustomer: true,
   },
   {
@@ -40,14 +35,12 @@ export const NAV_ITEMS = [
     label: 'Facturación',
     icon: 'Receipt',
     tabKey: 'facturacion',
-    privilege: Priv.READ_FACTURACION,
     requiresCustomer: true,
   },
   {
     label: 'Herramientas',
     icon: 'Build',
     tabKey: 'herramientas',
-    privilege: Priv.READ_HERRAMIENTAS,
     requiresCustomer: false,
     placement: 'bottom', // global, no depende del cliente → se ancla al fondo del nav
     children: [

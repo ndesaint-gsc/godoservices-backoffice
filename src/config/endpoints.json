@@ -1,8 +1,8 @@
 {
-  "USERS":         "/users",
-  "USER_INFO":     "/perfil/console/user/info",
+  "USERS": "/users",
+  "USER_INFO": "/perfil/console/user/info",
   "SUBSCRIPTIONS": "/subscriptions",
-  "INVOICES":      "/invoices",
-  "AUTH_LOGIN":    "/auth/login",
-  "AUTH_LOGOUT":   "/auth/logout"
+  "INVOICES": "/invoices",
+  "AUTH_LOGIN": "/auth/login",
+  "AUTH_LOGOUT": "/auth/logout"
 }

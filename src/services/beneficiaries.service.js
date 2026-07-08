@@ -75,8 +75,7 @@ const exportFile = async (guid, { subscriptionId, email }) => {
 // POST beneficiaries/invitations  body: GuidBeneficiary[]  (inviteBeneficiaries).
 // Encola una tarea por owner y responde 202 (procesado real async). Cada item:
 // { guid: <owner>, beneficiary: { subscriptionId, email, additionalData[...] } }.
-const invite = (items) =>
-  http.post(apiUrl(BASE + '/beneficiaries/invitations'), items);
+const invite = (items) => http.post(apiUrl(BASE + '/beneficiaries/invitations'), items);
 
 const beneficiariesService = { list, add, remove, importFile, exportFile, invite };
 

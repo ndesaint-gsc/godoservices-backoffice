@@ -13,9 +13,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useSnackbar } from 'notistack';
-import { useHasPrivilege } from '@/common/permissions/useHasPrivilege';
 import { useActionAllowed } from '@/common/permissions/permissions';
-import { Priv } from '@/common/permissions/privileges';
 import retentionService from '@/services/retention.service';
 import { RETENTION_TYPES, itemsForType } from '@/components/retention/retentionTypes';
 import RetentionVideoForm from '@/components/retention/RetentionVideoForm';
@@ -31,11 +29,8 @@ const TYPE_ORDER = ['OFFER', 'ARTICLE', 'FEATURE', 'SECTION'];
 
 const HtRetencion = () => {
   const { enqueueSnackbar } = useSnackbar();
-  const canRead = useHasPrivilege(Priv.READ_HERRAMIENTAS);
-  // Edición (vídeo/imagen/contenido) combinada con el gating por ACCIÓN (default-deny).
-  const hasEditPriv = useHasPrivilege(Priv.EDIT_HERRAMIENTAS);
-  const canRetentionEdit = useActionAllowed('herramientas.retentionEdit');
-  const canEdit = hasEditPriv && canRetentionEdit;
+  // Read access is enforced by the route (tab 'herramientas'); here we only gate editing.
+  const canEdit = useActionAllowed('herramientas.retentionEdit');
 
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -57,10 +52,6 @@ const HtRetencion = () => {
   };
 
   useEffect(() => {
-    if (!canRead) {
-      setLoading(false);
-      return undefined;
-    }
     let active = true;
     setLoading(true);
     retentionService
@@ -78,7 +69,7 @@ const HtRetencion = () => {
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canRead]);
+  }, []);
 
   // Config del tenant seleccionado dentro del Map<Tenants, Config>.
   const tenantConfig = useMemo(() => config?.config?.[tenant] || null, [config, tenant]);
@@ -106,11 +97,7 @@ const HtRetencion = () => {
         </Typography>
       </Box>
 
-      {!canRead ? (
-        <Alert severity="info" variant="outlined">
-          No tienes permiso para ver esta sección.
-        </Alert>
-      ) : loading ? (
+      {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', my: 6 }}>
           <CircularProgress size={28} />
         </Box>
@@ -173,7 +160,11 @@ const HtRetencion = () => {
                   onSaved={load}
                 />
                 {!canEdit ? (
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5, display: 'block' }}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ mt: 1.5, display: 'block' }}
+                  >
                     Solo lectura: no tienes permiso de edición.
                   </Typography>
                 ) : null}

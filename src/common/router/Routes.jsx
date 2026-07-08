@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { useSnackbar } from 'notistack';
-import { Priv } from '@/common/permissions/privileges';
 import AuthenticatedRoute from '@/common/router/AuthenticatedRoute';
 import UnauthenticatedRoute from '@/common/router/UnauthenticatedRoute';
 import { selectHasCustomer } from '@/common/features/customer/customerSlice';
@@ -41,16 +40,16 @@ const RequireCustomer = ({ children }) => {
   return children;
 };
 
-// Customer-scoped page: auth + READ privilege + a loaded customer.
-const Scoped = ({ priv, children }) => (
-  <AuthenticatedRoute requiredPrivilege={priv}>
+// Customer-scoped page: auth + tab visible (rol activo) + a loaded customer.
+const Scoped = ({ tab, children }) => (
+  <AuthenticatedRoute requiredTab={tab}>
     <RequireCustomer>{children}</RequireCustomer>
   </AuthenticatedRoute>
 );
 
-// Global tool page: auth + READ privilege, no customer needed.
-const Global = ({ priv, children }) => (
-  <AuthenticatedRoute requiredPrivilege={priv}>{children}</AuthenticatedRoute>
+// Global tool page: auth + tab visible (rol activo), no customer needed.
+const Global = ({ tab, children }) => (
+  <AuthenticatedRoute requiredTab={tab}>{children}</AuthenticatedRoute>
 );
 
 const AppRoutes = () => (
@@ -72,38 +71,151 @@ const AppRoutes = () => (
       }
     />
 
-    <Route path="/datos" element={<Scoped priv={Priv.READ_DATOS}><Datos /></Scoped>} />
+    <Route
+      path="/datos"
+      element={
+        <Scoped tab="datos">
+          <Datos />
+        </Scoped>
+      }
+    />
+
+    <Route path="/suscripciones" element={<Navigate to="/suscripciones/digitales" replace />} />
+    <Route
+      path="/suscripciones/digitales"
+      element={
+        <Scoped tab="suscripciones">
+          <SuscDigitales />
+        </Scoped>
+      }
+    />
+    <Route
+      path="/suscripciones/impresas"
+      element={
+        <Scoped tab="suscripciones">
+          <SuscImpresas />
+        </Scoped>
+      }
+    />
+    <Route
+      path="/suscripciones/tienda"
+      element={
+        <Scoped tab="suscripciones">
+          <SuscTienda />
+        </Scoped>
+      }
+    />
+    <Route
+      path="/suscripciones/accesos"
+      element={
+        <Scoped tab="suscripciones">
+          <SuscAccesos />
+        </Scoped>
+      }
+    />
+    <Route
+      path="/suscripciones/crear"
+      element={
+        <Scoped tab="suscripciones">
+          <SuscCrear />
+        </Scoped>
+      }
+    />
 
     <Route
-      path="/suscripciones"
-      element={<Navigate to="/suscripciones/digitales" replace />}
+      path="/notificaciones"
+      element={
+        <Scoped tab="notificaciones">
+          <Notificaciones />
+        </Scoped>
+      }
     />
-    <Route path="/suscripciones/digitales" element={<Scoped priv={Priv.READ_SUSCRIPCIONES}><SuscDigitales /></Scoped>} />
-    <Route path="/suscripciones/impresas" element={<Scoped priv={Priv.READ_SUSCRIPCIONES}><SuscImpresas /></Scoped>} />
-    <Route path="/suscripciones/tienda" element={<Scoped priv={Priv.READ_SUSCRIPCIONES}><SuscTienda /></Scoped>} />
-    <Route path="/suscripciones/accesos" element={<Scoped priv={Priv.READ_SUSCRIPCIONES}><SuscAccesos /></Scoped>} />
-    <Route path="/suscripciones/crear" element={<Scoped priv={Priv.READ_SUSCRIPCIONES}><SuscCrear /></Scoped>} />
-
-    <Route path="/notificaciones" element={<Scoped priv={Priv.READ_NOTIFICACIONES}><Notificaciones /></Scoped>} />
-    <Route path="/facturacion" element={<Scoped priv={Priv.READ_FACTURACION}><Facturacion /></Scoped>} />
-
     <Route
-      path="/herramientas"
-      element={<Navigate to="/herramientas/crear-usuario" replace />}
+      path="/facturacion"
+      element={
+        <Scoped tab="facturacion">
+          <Facturacion />
+        </Scoped>
+      }
     />
-    <Route path="/herramientas/crear-usuario" element={<Global priv={Priv.READ_HERRAMIENTAS}><HtCrearUsuario /></Global>} />
-    <Route path="/herramientas/nif-masivo" element={<Global priv={Priv.READ_HERRAMIENTAS}><HtNifMasivo /></Global>} />
-    <Route path="/herramientas/roles-masivo" element={<Global priv={Priv.READ_HERRAMIENTAS}><HtRolesMasivo /></Global>} />
-    <Route path="/herramientas/landings" element={<Global priv={Priv.READ_HERRAMIENTAS}><HtLandings /></Global>} />
-    <Route path="/herramientas/retencion" element={<Global priv={Priv.READ_HERRAMIENTAS}><HtRetencion /></Global>} />
-    <Route path="/herramientas/buscar-externalid" element={<Global priv={Priv.READ_HERRAMIENTAS}><HtBuscarExternalId /></Global>} />
 
-    {/* Editor de permisos (meta): solo auth; el acceso real se gobierna por el tab 'permisos' (ADMIN). */}
-    <Route path="/permisos" element={<AuthenticatedRoute><Permisos /></AuthenticatedRoute>} />
+    <Route path="/herramientas" element={<Navigate to="/herramientas/crear-usuario" replace />} />
+    <Route
+      path="/herramientas/crear-usuario"
+      element={
+        <Global tab="herramientas">
+          <HtCrearUsuario />
+        </Global>
+      }
+    />
+    <Route
+      path="/herramientas/nif-masivo"
+      element={
+        <Global tab="herramientas">
+          <HtNifMasivo />
+        </Global>
+      }
+    />
+    <Route
+      path="/herramientas/roles-masivo"
+      element={
+        <Global tab="herramientas">
+          <HtRolesMasivo />
+        </Global>
+      }
+    />
+    <Route
+      path="/herramientas/landings"
+      element={
+        <Global tab="herramientas">
+          <HtLandings />
+        </Global>
+      }
+    />
+    <Route
+      path="/herramientas/retencion"
+      element={
+        <Global tab="herramientas">
+          <HtRetencion />
+        </Global>
+      }
+    />
+    <Route
+      path="/herramientas/buscar-externalid"
+      element={
+        <Global tab="herramientas">
+          <HtBuscarExternalId />
+        </Global>
+      }
+    />
+
+    {/* Editor de permisos (meta): gated por el tab 'permisos' (ADMIN/GOD). */}
+    <Route
+      path="/permisos"
+      element={
+        <AuthenticatedRoute requiredTab="permisos">
+          <Permisos />
+        </AuthenticatedRoute>
+      }
+    />
     {/* Admin de integración (consolas de la plataforma): gated por el tab 'integraciones'. */}
-    <Route path="/integraciones" element={<AuthenticatedRoute><Integraciones /></AuthenticatedRoute>} />
+    <Route
+      path="/integraciones"
+      element={
+        <AuthenticatedRoute requiredTab="integraciones">
+          <Integraciones />
+        </AuthenticatedRoute>
+      }
+    />
     {/* Config técnica de la propia consola (god): gated por el tab 'configuracion'. */}
-    <Route path="/configuracion" element={<AuthenticatedRoute><Configuracion /></AuthenticatedRoute>} />
+    <Route
+      path="/configuracion"
+      element={
+        <AuthenticatedRoute requiredTab="configuracion">
+          <Configuracion />
+        </AuthenticatedRoute>
+      }
+    />
 
     <Route path="*" element={<NotFound />} />
   </Routes>

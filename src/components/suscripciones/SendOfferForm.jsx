@@ -1,11 +1,4 @@
-import {
-  Box,
-  Button,
-  CircularProgress,
-  MenuItem,
-  Stack,
-  TextField,
-} from '@mui/material';
+import { Box, Button, CircularProgress, MenuItem, Stack, TextField } from '@mui/material';
 import { sortByText } from '@/common/sort';
 
 // Etiqueta visible de producto / plan de pago (displayName con fallback a name).

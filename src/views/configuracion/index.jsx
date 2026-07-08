@@ -108,7 +108,13 @@ const DimensionEditor = ({ label, help, items, reserved, canEdit, onAdd, onRemov
             }}
             sx={{ minWidth: 260 }}
           />
-          <Button size="small" variant="outlined" startIcon={<Add />} onClick={add} disabled={!value.trim()}>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<Add />}
+            onClick={add}
+            disabled={!value.trim()}
+          >
             Añadir
           </Button>
         </Stack>
@@ -141,7 +147,9 @@ const Configuracion = () => {
         fields: cat?.fields || [],
       });
     } catch (error) {
-      enqueueSnackbar('Error al cargar la configuración: ' + (error?.message || ''), { variant: 'error' });
+      enqueueSnackbar('Error al cargar la configuración: ' + (error?.message || ''), {
+        variant: 'error',
+      });
     } finally {
       setLoading(false);
     }
@@ -167,7 +175,8 @@ const Configuracion = () => {
       return { ...c, [dim]: [...c[dim], key] };
     });
   };
-  const removeKey = (dim, key) => setCatalog((c) => ({ ...c, [dim]: c[dim].filter((k) => k !== key) }));
+  const removeKey = (dim, key) =>
+    setCatalog((c) => ({ ...c, [dim]: c[dim].filter((k) => k !== key) }));
 
   const onSaveCatalog = async () => {
     setSaving(true);
@@ -180,7 +189,9 @@ const Configuracion = () => {
       enqueueSnackbar('Catálogo guardado (en memoria del backend)', { variant: 'success' });
       await load();
     } catch (error) {
-      enqueueSnackbar('Error al guardar el catálogo: ' + (error?.message || ''), { variant: 'error' });
+      enqueueSnackbar('Error al guardar el catálogo: ' + (error?.message || ''), {
+        variant: 'error',
+      });
     } finally {
       setSaving(false);
     }
@@ -226,14 +237,26 @@ const Configuracion = () => {
           Identificadores
         </Typography>
         <Stack spacing={2}>
-          <ReadonlyField label="consoleId" value={config.consoleId} mono copy onCopy={() => copy(config.consoleId)} />
+          <ReadonlyField
+            label="consoleId"
+            value={config.consoleId}
+            mono
+            copy
+            onCopy={() => copy(config.consoleId)}
+          />
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
             <ReadonlyField label="Producto" value={config.product} />
             <ReadonlyField label="Consola" value={config.appconsole} />
           </Stack>
           <ReadonlyField label="Prefijo de rol (Evolok)" value={config.rolePrefix} mono />
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-            <ReadonlyField label="Grupo Evolok del god" value={config.godGroup} mono copy onCopy={() => copy(config.godGroup)} />
+            <ReadonlyField
+              label="Grupo Evolok del god"
+              value={config.godGroup}
+              mono
+              copy
+              onCopy={() => copy(config.godGroup)}
+            />
             <ReadonlyField label="Email del god" value={config.godEmail} />
           </Stack>
         </Stack>
@@ -268,7 +291,8 @@ const Configuracion = () => {
           }}
         />
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-          Trátala como un secreto. Se envía en la cabecera <code>X-Console-ApiKey</code> del plano admin.
+          Trátala como un secreto. Se envía en la cabecera <code>X-Console-ApiKey</code> del plano
+          admin.
         </Typography>
       </Paper>
 
@@ -277,9 +301,9 @@ const Configuracion = () => {
           Catálogo de permisos
         </Typography>
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-          Define las tabs, acciones y datos de esta consola. Es lo que aparece en la vista de Permisos.
-          {' '}<code>permisos</code> y <code>configuracion</code> son reservadas (siempre presentes, no
-          borrables). Sin duplicados. Se guarda junto al mapa de roles/privilegios.
+          Define las tabs, acciones y datos de esta consola. Es lo que aparece en la vista de
+          Permisos. <code>permisos</code> y <code>configuracion</code> son reservadas (siempre
+          presentes, no borrables). Sin duplicados. Se guarda junto al mapa de roles/privilegios.
           {!canEditCatalog && ' · Modo lectura (no tienes permiso para editar el catálogo).'}
         </Typography>
         <Stack spacing={2.5}>

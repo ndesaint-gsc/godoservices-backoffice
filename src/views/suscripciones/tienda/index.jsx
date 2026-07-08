@@ -3,9 +3,7 @@ import { useSelector } from 'react-redux';
 import { Paper, Stack, Typography } from '@mui/material';
 import { useSnackbar } from 'notistack';
 import { selectCustomer } from '@/common/features/customer/customerSlice';
-import { useHasPrivilege } from '@/common/permissions/useHasPrivilege';
 import { useActionAllowed } from '@/common/permissions/permissions';
-import { Priv } from '@/common/permissions/privileges';
 import { ModalContext } from '@/common/providers/ModalProvider';
 import subscriptionsService from '@/services/subscriptions.service';
 import subscriptionActionsService from '@/services/subscriptionActions.service';
@@ -13,24 +11,6 @@ import SubscriptionsTable from '@/components/suscripciones/SubscriptionsTable';
 import SubscriptionActionsMenu from '@/components/subscriptionActions/SubscriptionActionsMenu';
 import ReassignDialog from '@/components/subscriptionActions/ReassignDialog';
 import { formatDate, sortByStartDateDesc } from '@/components/suscripciones/format';
-
-// Lectura de errores del backend (validationErrors / errorMessage), igual que
-// datos/index.jsx.
-const readErrorMessage = (error) => {
-  const rawMessage = error?.message || '';
-  const jsonPart = rawMessage.slice(rawMessage.indexOf('{'));
-  try {
-    const parsed = JSON.parse(jsonPart);
-    if (parsed.validationErrors?.length) {
-      return parsed.validationErrors
-        .map((validationError) => `${validationError.field}: ${validationError.message}`)
-        .join('; ');
-    }
-    return parsed.errorMessage || rawMessage;
-  } catch {
-    return rawMessage;
-  }
-};
 
 // Carga recargable: como useSubscriptions pero exponiendo un `reload()` para
 // refrescar la tabla tras una acción (no toco el hook compartido).
@@ -73,8 +53,7 @@ const SuscTienda = () => {
   const { enqueueSnackbar } = useSnackbar();
   const modal = useContext(ModalContext);
   const customer = useSelector(selectCustomer);
-  const canEdit = useHasPrivilege(Priv.EDIT_SUSCRIPCIONES);
-  // Gating por ACCIÓN (default-deny): el canal Apple usa appleAction; el canal Google, googleAction.
+  // Gating por ACCIÓN (default-deny, rol activo): el canal Apple usa appleAction; el Google, googleAction.
   const canAppleAction = useActionAllowed('suscripciones.appleAction');
   const canGoogleAction = useActionAllowed('suscripciones.googleAction');
   const isKindAllowed = (kind) => (kind === 'google' ? canGoogleAction : canAppleAction);
@@ -109,7 +88,7 @@ const SuscTienda = () => {
       enqueueSnackbar(successMessage, { variant: 'success' });
       await reload();
     } catch (error) {
-      enqueueSnackbar('Error: ' + readErrorMessage(error), { variant: 'error' });
+      enqueueSnackbar('Error: ' + error.message, { variant: 'error' });
     } finally {
       setRunningAction(false);
     }
@@ -130,7 +109,12 @@ const SuscTienda = () => {
       confirmText: 'Desasignar',
       variant: 'error',
       onSubmit: () =>
-        runAction(kind, { action: 'unassign', ...basePayload(row, kind) }, 'Suscripción desasignada', reload),
+        runAction(
+          kind,
+          { action: 'unassign', ...basePayload(row, kind) },
+          'Suscripción desasignada',
+          reload,
+        ),
     });
   };
 
@@ -179,7 +163,7 @@ const SuscTienda = () => {
       return (
         <SubscriptionActionsMenu
           row={row}
-          disabled={!canEdit || runningAction || !isKindAllowed(kind)}
+          disabled={runningAction || !isKindAllowed(kind)}
           onUnassign={handleUnassign(kind, reload)}
           onForce={handleForce(kind, reload)}
           onReassign={handleReassign(kind, reload)}
@@ -198,7 +182,11 @@ const SuscTienda = () => {
 
   const thirdPartyColumns = [
     { key: 'type', label: 'Tipo' },
-    { key: 'description', label: 'Descripción', render: (row) => row.description || row.productName },
+    {
+      key: 'description',
+      label: 'Descripción',
+      render: (row) => row.description || row.productName,
+    },
     { key: 'subscriptionId', label: 'ID Suscripción' },
     { key: 'startDate', label: 'Inicio', render: (row) => formatDate(row.startDate) },
     { key: 'endDate', label: 'Fin', render: (row) => formatDate(row.endDate) },
