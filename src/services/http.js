@@ -1,31 +1,59 @@
 import authService from '@/services/auth.service';
+import { notifyUnauthorized } from '@/services/console';
 
-const buildHeaders = async () => {
-  const token = await authService.getAuthToken();
-  return {
-    Accept: 'application/json',
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: token } : {}),
-  };
+// Fallback when the backend returns no readable errorMessage (e.g. a 500 HTML page).
+export const GENERIC_ERROR_MESSAGE =
+  'Ha ocurrido un error. Vuelve a intentarlo más tarde y, en caso de persistir, contacta el departamento técnico.';
+
+// Presentable message from an error body: backend validationErrors/errorMessage if JSON, else generic.
+// Never returns the raw HTML.
+const errorMessageFromBody = (bodyText) => {
+  if (bodyText) {
+    try {
+      const parsed = JSON.parse(bodyText);
+      if (parsed?.validationErrors?.length) {
+        return parsed.validationErrors
+          .map((validationError) => `${validationError.field}: ${validationError.message}`)
+          .join('; ');
+      }
+      if (parsed?.errorMessage) return parsed.errorMessage;
+    } catch {
+      // non-JSON body (HTML error page, …) → generic
+    }
+  }
+  return GENERIC_ERROR_MESSAGE;
 };
 
 const request = async (method, url, { body, params } = {}) => {
-  const queryString = params ? '?' + new URLSearchParams(params).toString() : '';
-  const headers = await buildHeaders();
-  const response = await fetch(url + queryString, {
+  // Console ops (/perfil/*) authenticate via the Evolok sessionId as a query param (backend reads
+  // ?sessionId= or the ev_gg_bo cookie). Don't override one already present (params or Vite proxy).
+  const sessionId = authService.getAuthToken();
+  const search = new URLSearchParams(params || {});
+  if (sessionId && !search.has('sessionId') && !url.includes('sessionId=')) {
+    search.set('sessionId', sessionId);
+  }
+  const extraQuery = search.toString();
+  // Service URL may already carry a query (e.g. `/nif?nif=X`): join with `&`, not a second `?`.
+  const separator = url.includes('?') ? '&' : '?';
+  const fullUrl = extraQuery ? url + separator + extraQuery : url;
+  const headers = { Accept: 'application/json', 'Content-Type': 'application/json' };
+  const response = await fetch(fullUrl, {
     method,
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 
   if (response.status === 401) {
-    // Soft logout via auth service. Throw so callers can react.
-    await authService.logout();
+    // Invalid/expired Evolok session → full logout via the same bridge as the SDK (clears redux + SDK,
+    // back to /login). Throw so the caller aborts its flow.
+    notifyUnauthorized();
     throw new Error('Unauthorized');
   }
   if (!response.ok) {
     const errorText = await response.text().catch(() => '');
-    throw new Error(`${response.status} ${response.statusText}${errorText ? ': ' + errorText : ''}`);
+    const error = new Error(errorMessageFromBody(errorText));
+    error.status = response.status;
+    throw error;
   }
   if (response.status === 204) return null;
 
