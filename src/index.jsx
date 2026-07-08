@@ -21,32 +21,32 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
         <BrandThemeProvider>
-        <CssBaseline />
-        <ModalProvider>
-          <SnackbarProvider
-            maxSnack={3}
-            hideIconVariant
-            action={(snackbarId) => (
-              <IconButton
-                size="small"
-                color="inherit"
-                aria-label="cerrar"
-                onClick={() => closeSnackbar(snackbarId)}
-              >
-                <CloseIcon fontSize="small" />
-              </IconButton>
-            )}
-          >
-            <BrowserRouter>
-              <HelmetProvider>
-                <BrandTitle />
-                <ScrollToTop />
-                <App />
-              </HelmetProvider>
-            </BrowserRouter>
-          </SnackbarProvider>
-        </ModalProvider>
-      </BrandThemeProvider>
+          <CssBaseline />
+          <ModalProvider>
+            <SnackbarProvider
+              maxSnack={3}
+              hideIconVariant
+              action={(snackbarId) => (
+                <IconButton
+                  size="small"
+                  color="inherit"
+                  aria-label="cerrar"
+                  onClick={() => closeSnackbar(snackbarId)}
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              )}
+            >
+              <BrowserRouter>
+                <HelmetProvider>
+                  <BrandTitle />
+                  <ScrollToTop />
+                  <App />
+                </HelmetProvider>
+              </BrowserRouter>
+            </SnackbarProvider>
+          </ModalProvider>
+        </BrandThemeProvider>
       </PersistGate>
     </Provider>
   </React.StrictMode>,

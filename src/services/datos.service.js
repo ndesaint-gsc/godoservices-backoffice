@@ -9,15 +9,13 @@ const updateUser = (guid, attributes) =>
   http.put(apiUrl('/perfil/console/user/' + guid), { attributes });
 
 // Credential actions. reset/verify take the full evUser object as body.
-const resetPassword = (evUser) =>
-  http.post(apiUrl('/perfil/console/user/resetPassword'), evUser);
+const resetPassword = (evUser) => http.post(apiUrl('/perfil/console/user/resetPassword'), evUser);
 
 const sendVerification = (evUser) =>
   http.post(apiUrl('/perfil/console/user/sendVerificationPassword'), evUser);
 
 // DELETE /perfil/console/user/{guid} — the server reloads the user from the guid.
-const deleteUser = (evUser) =>
-  http.del(apiUrl('/perfil/console/user/' + evUser.guid));
+const deleteUser = (evUser) => http.del(apiUrl('/perfil/console/user/' + evUser.guid));
 
 const invalidateCache = (guid) =>
   http.post(apiUrl('/perfil/console/user/invalidate-cache' + toQueryString({ guid })));
@@ -30,8 +28,7 @@ const unblockUser = (guid) =>
 const linkNif = (guid, nif) =>
   http.put(apiUrl('/perfil/console/user/' + guid + '/nif' + toQueryString({ nif })));
 
-const unlinkNif = (guid) =>
-  http.del(apiUrl('/perfil/console/user/' + guid + '/nif'));
+const unlinkNif = (guid) => http.del(apiUrl('/perfil/console/user/' + guid + '/nif'));
 
 const datosService = {
   updateUser,

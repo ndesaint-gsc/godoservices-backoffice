@@ -13,9 +13,7 @@ import {
 } from '@mui/material';
 import { useSnackbar } from 'notistack';
 import { selectCustomer, setCustomer } from '@/common/features/customer/customerSlice';
-import { useHasPrivilege } from '@/common/permissions/useHasPrivilege';
 import { useActionAllowed } from '@/common/permissions/permissions';
-import { Priv } from '@/common/permissions/privileges';
 import { ModalContext } from '@/common/providers/ModalProvider';
 import userService from '@/services/user.service';
 import subscriptionsService from '@/services/subscriptions.service';
@@ -27,23 +25,12 @@ const formatDate = (milliseconds) => {
   return Number.isNaN(date.getTime()) ? String(milliseconds) : date.toLocaleDateString('es-ES');
 };
 
-const readErrorMessage = (error) => {
-  const rawMessage = error?.message || '';
-  const jsonPart = rawMessage.slice(rawMessage.indexOf('{'));
-  try {
-    return JSON.parse(jsonPart).errorMessage || rawMessage;
-  } catch {
-    return rawMessage;
-  }
-};
-
 const Accesos = () => {
   const dispatch = useDispatch();
   const { enqueueSnackbar } = useSnackbar();
   const modal = useContext(ModalContext);
   const customer = useSelector(selectCustomer);
-  const canEdit = useHasPrivilege(Priv.EDIT_SUSCRIPCIONES);
-  // Gating por ACCIÓN (default-deny): crear acceso temporal / revocar.
+  // Gating por ACCIÓN (default-deny, rol activo): crear acceso temporal / revocar.
   const canRoleCreate = useActionAllowed('suscripciones.roleCreate');
   const canRoleRevoke = useActionAllowed('suscripciones.roleRevoke');
   const [revoking, setRevoking] = useState(false);
@@ -70,7 +57,7 @@ const Accesos = () => {
           enqueueSnackbar('Acceso revocado', { variant: 'success' });
           await refreshCustomer();
         } catch (error) {
-          enqueueSnackbar('Error: ' + readErrorMessage(error), { variant: 'error' });
+          enqueueSnackbar('Error: ' + error.message, { variant: 'error' });
         } finally {
           setRevoking(false);
         }
@@ -94,7 +81,7 @@ const Accesos = () => {
             Accesos temporales
           </Typography>
         </Box>
-        {canEdit && canRoleCreate && (
+        {canRoleCreate && (
           <Button variant="contained" onClick={() => setCreateOpen(true)}>
             Crear acceso temporal
           </Button>
@@ -116,7 +103,7 @@ const Accesos = () => {
                   disableGutters
                   sx={{ py: 1.5, display: 'flex', justifyContent: 'space-between', gap: 2 }}
                   secondaryAction={
-                    canEdit && canRoleRevoke && isTemporal ? (
+                    canRoleRevoke && isTemporal ? (
                       <Button
                         size="small"
                         color="error"
@@ -146,7 +133,7 @@ const Accesos = () => {
         </List>
       )}
 
-      {canEdit && canRoleCreate && (
+      {canRoleCreate && (
         <CreateAccessDialog
           open={createOpen}
           evUser={evUser}

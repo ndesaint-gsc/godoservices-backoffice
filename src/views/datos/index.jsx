@@ -16,9 +16,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import { useSnackbar } from 'notistack';
 import { patchEvUser, selectCustomer, setCustomer } from '@/common/features/customer/customerSlice';
-import { useHasPrivilege } from '@/common/permissions/useHasPrivilege';
 import { useActionAllowed, useFieldMode } from '@/common/permissions/permissions';
-import { Priv } from '@/common/permissions/privileges';
 import { ModalContext } from '@/common/providers/ModalProvider';
 import { GENDERS, LANGUAGES, COUNTRIES } from '@/common/profileOptions';
 import userService from '@/services/user.service';
@@ -44,23 +42,6 @@ const toDateInputValue = (storedValue) =>
   storedValue ? String(storedValue).slice(0, 10).replace(/\//g, '-') : '';
 const fromDateInputValue = (dateInputValue) =>
   dateInputValue ? dateInputValue.replace(/-/g, '/') + ' 00:00:00' : '';
-
-// Pull a human-readable reason out of the backend error (validationErrors / errorMessage).
-const readErrorMessage = (error) => {
-  const rawMessage = error?.message || '';
-  const jsonPart = rawMessage.slice(rawMessage.indexOf('{'));
-  try {
-    const parsed = JSON.parse(jsonPart);
-    if (parsed.validationErrors?.length) {
-      return parsed.validationErrors
-        .map((validationError) => `${validationError.field}: ${validationError.message}`)
-        .join('; ');
-    }
-    return parsed.errorMessage || rawMessage;
-  } catch {
-    return rawMessage;
-  }
-};
 
 const ReadOnlyField = ({ label, value }) => (
   <TextField
@@ -145,11 +126,8 @@ const Datos = () => {
   const { enqueueSnackbar } = useSnackbar();
   const modal = useContext(ModalContext);
   const customer = useSelector(selectCustomer);
-  const canEdit = useHasPrivilege(Priv.EDIT_DATOS);
-  // Gating por ACCIÓN desde el registry de permisos del backend (action[key] === 'allowed').
-  // Patrón: cada botón comprueba su acción namespaced. (TODO: cablear el resto de vistas/acciones:
-  // facturacion.substitute/rectify/negative/recalculate/fiscalEdit, suscripciones.*, notificaciones.*,
-  // herramientas.* — mismas claves que ConsolePermissionsCatalog en el backend.)
+  // Gating por ACCIÓN desde el registry de permisos del backend (action[key] === 'allowed'), resuelto
+  // para el ROL ACTIVO. Cada botón comprueba su acción namespaced.
   const canEditPersonal = useActionAllowed('datos.editPersonal');
   const canResetPassword = useActionAllowed('datos.resetPassword');
   const canSendVerification = useActionAllowed('datos.sendVerification');
@@ -158,6 +136,9 @@ const Datos = () => {
   const canDelete = useActionAllowed('datos.delete');
   const canNifLink = useActionAllowed('datos.nifLink');
   const canNifUnlink = useActionAllowed('datos.nifUnlink');
+  const canAnyCredentialAction =
+    canResetPassword || canSendVerification || canInvalidateCache || canUnblock || canDelete;
+  const canAnyNifAction = canNifLink || canNifUnlink;
 
   // Modo de campo (default-deny vía 'editable' por defecto del motor):
   // - personalData: 'editable' edita; 'viewable' solo-lectura sin botón guardar; 'hidden' oculta el bloque.
@@ -202,7 +183,10 @@ const Datos = () => {
       enqueueSnackbar('No hay cambios que guardar', { variant: 'info' });
       return;
     }
-    const attributes = changedFields.map((field) => ({ name: field.name, value: form[field.name] }));
+    const attributes = changedFields.map((field) => ({
+      name: field.name,
+      value: form[field.name],
+    }));
     setSaving(true);
     try {
       await datosService.updateUser(evUser.guid, attributes);
@@ -214,7 +198,7 @@ const Datos = () => {
       dispatch(patchEvUser(savedValues));
       enqueueSnackbar('Datos actualizados', { variant: 'success' });
     } catch (error) {
-      enqueueSnackbar('Error al guardar: ' + readErrorMessage(error), { variant: 'error' });
+      enqueueSnackbar('Error al guardar: ' + error.message, { variant: 'error' });
     } finally {
       setSaving(false);
     }
@@ -227,7 +211,7 @@ const Datos = () => {
       enqueueSnackbar(successMessage, { variant: 'success' });
       await refreshCustomer();
     } catch (error) {
-      enqueueSnackbar('Error: ' + readErrorMessage(error), { variant: 'error' });
+      enqueueSnackbar('Error: ' + error.message, { variant: 'error' });
     } finally {
       setRunningAction(false);
     }
@@ -239,7 +223,8 @@ const Datos = () => {
       content: `Vas a eliminar al usuario ${evUser.email_address || evUser.guid}. Esta acción no se puede deshacer. ¿Continuar?`,
       confirmText: 'Eliminar',
       variant: 'error',
-      onSubmit: () => runCredentialAction(() => datosService.deleteUser(evUser), 'Usuario eliminado'),
+      onSubmit: () =>
+        runCredentialAction(() => datosService.deleteUser(evUser), 'Usuario eliminado'),
     });
   };
 
@@ -257,7 +242,7 @@ const Datos = () => {
               [field.name]: fromDateInputValue(event.target.value),
             }))
           }
-          disabled={!canEdit || saving || personalReadOnly}
+          disabled={saving || personalReadOnly}
           fullWidth
           size="small"
           InputLabelProps={{ shrink: true }}
@@ -273,7 +258,7 @@ const Datos = () => {
           label={field.label}
           value={valueInOptions ? form[field.name] : ''}
           onChange={handleFieldChange(field.name)}
-          disabled={!canEdit || saving || personalReadOnly}
+          disabled={saving || personalReadOnly}
           fullWidth
           size="small"
           InputLabelProps={{ shrink: true }}
@@ -295,7 +280,7 @@ const Datos = () => {
         label={field.label}
         value={form[field.name] ?? ''}
         onChange={handleFieldChange(field.name)}
-        disabled={!canEdit || saving || personalReadOnly}
+        disabled={saving || personalReadOnly}
         fullWidth
         size="small"
         InputLabelProps={{ shrink: true }}
@@ -313,83 +298,91 @@ const Datos = () => {
     <Stack spacing={3}>
       {/* Identity (read-only). Bloque read-only: 'hidden' lo oculta, el resto lo muestra. */}
       {identificationMode !== 'hidden' && (
-      <Paper variant="outlined" sx={{ p: { xs: 3, md: 4 } }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
-          <Box>
-            <Typography variant="overline" color="text.secondary">
-              Usuario
-            </Typography>
-            <Typography variant="h5" sx={{ mt: 0.25 }}>
-              {evUser.display_name || evUser.email_address || '—'}
-            </Typography>
-          </Box>
-          <Stack direction="row" spacing={1}>
-            <StateChip state={evUser.state} />
-            <VerifiedBadge verified={evUser.email_verified} />
-            {evUser.brand && (
-              <Chip
-                label={evUser.brand}
-                size="small"
-                variant="outlined"
-                sx={{ fontWeight: 600, borderColor: 'divider' }}
-              />
-            )}
+        <Paper variant="outlined" sx={{ p: { xs: 3, md: 4 } }}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+            sx={{ mb: 0.5 }}
+          >
+            <Box>
+              <Typography variant="overline" color="text.secondary">
+                Usuario
+              </Typography>
+              <Typography variant="h5" sx={{ mt: 0.25 }}>
+                {evUser.display_name || evUser.email_address || '—'}
+              </Typography>
+            </Box>
+            <Stack direction="row" spacing={1}>
+              <StateChip state={evUser.state} />
+              <VerifiedBadge verified={evUser.email_verified} />
+              {evUser.brand && (
+                <Chip
+                  label={evUser.brand}
+                  size="small"
+                  variant="outlined"
+                  sx={{ fontWeight: 600, borderColor: 'divider' }}
+                />
+              )}
+            </Stack>
           </Stack>
-        </Stack>
 
-        <Typography variant="overline" color="text.secondary" sx={{ mt: 3, display: 'block' }}>
-          Datos de identificación
-        </Typography>
-        <Box sx={fieldGridStyles}>
-          <ReadOnlyField label="GUID" value={evUser.guid} />
-          <ReadOnlyField label="UID" value={evUser.uid} />
-          <ReadOnlyField label="Email" value={evUser.email_address} />
-          <ReadOnlyField label="Username" value={evUser.display_name} />
-          <ReadOnlyField label="Fecha de Registro (Evolok)" value={formatTimestamp(evUser.created)} />
-          <ReadOnlyField
-            label="Fecha de Registro (Legacy)"
-            value={formatTimestamp(evUser.legacyRegistrationDate)}
-          />
-          <ReadOnlyField label="Estado Evolok" value={evUser.state} />
-          <ReadOnlyField label="Verificado" value={formatBool(evUser.email_verified)} />
-          <ReadOnlyField label="ID Tarjeta Club" value={evUser.fidelity_card_id} />
-          <ReadOnlyField label="LV Consentimiento" value={evUser.LVConsent} />
-          <ReadOnlyField label="MD Consentimiento" value={evUser.MDConsent} />
-          <ReadOnlyField label="R1 Consentimiento" value={evUser.R1Consent} />
-          <ReadOnlyField label="Brand" value={evUser.brand} />
-        </Box>
-      </Paper>
+          <Typography variant="overline" color="text.secondary" sx={{ mt: 3, display: 'block' }}>
+            Datos de identificación
+          </Typography>
+          <Box sx={fieldGridStyles}>
+            <ReadOnlyField label="GUID" value={evUser.guid} />
+            <ReadOnlyField label="UID" value={evUser.uid} />
+            <ReadOnlyField label="Email" value={evUser.email_address} />
+            <ReadOnlyField label="Username" value={evUser.display_name} />
+            <ReadOnlyField
+              label="Fecha de Registro (Evolok)"
+              value={formatTimestamp(evUser.created)}
+            />
+            <ReadOnlyField
+              label="Fecha de Registro (Legacy)"
+              value={formatTimestamp(evUser.legacyRegistrationDate)}
+            />
+            <ReadOnlyField label="Estado Evolok" value={evUser.state} />
+            <ReadOnlyField label="Verificado" value={formatBool(evUser.email_verified)} />
+            <ReadOnlyField label="ID Tarjeta Club" value={evUser.fidelity_card_id} />
+            <ReadOnlyField label="LV Consentimiento" value={evUser.LVConsent} />
+            <ReadOnlyField label="MD Consentimiento" value={evUser.MDConsent} />
+            <ReadOnlyField label="R1 Consentimiento" value={evUser.R1Consent} />
+            <ReadOnlyField label="Brand" value={evUser.brand} />
+          </Box>
+        </Paper>
       )}
 
       {/* Personal data (editable with EDIT_DATOS). Modo de campo:
           'hidden' oculta el bloque; 'viewable' lo deja solo-lectura sin botón guardar. */}
       {personalDataMode !== 'hidden' && (
-      <Paper variant="outlined" sx={{ p: { xs: 3, md: 4 } }}>
-        <Typography variant="overline" color="text.secondary">
-          Perfil del usuario
-        </Typography>
-        <Typography variant="h6" sx={{ mt: 0.25 }}>
-          Datos personales
-        </Typography>
-        {(!canEdit || personalReadOnly) && (
-          <Typography variant="caption" color="text.secondary">
-            Modo lectura. No tienes permiso para editar.
+        <Paper variant="outlined" sx={{ p: { xs: 3, md: 4 } }}>
+          <Typography variant="overline" color="text.secondary">
+            Perfil del usuario
           </Typography>
-        )}
-        <Box sx={fieldGridStyles}>{PERSONAL_FIELDS.map(renderEditableField)}</Box>
-        {canEdit && !personalReadOnly && (
-          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
-            <Button
-              variant="contained"
-              onClick={handleSave}
-              disabled={saving || !canEditPersonal}
-              startIcon={saving ? <CircularProgress size={16} /> : null}
-            >
-              Guardar cambios
-            </Button>
-          </Box>
-        )}
-      </Paper>
+          <Typography variant="h6" sx={{ mt: 0.25 }}>
+            Datos personales
+          </Typography>
+          {personalReadOnly && (
+            <Typography variant="caption" color="text.secondary">
+              Modo lectura. No tienes permiso para editar.
+            </Typography>
+          )}
+          <Box sx={fieldGridStyles}>{PERSONAL_FIELDS.map(renderEditableField)}</Box>
+          {!personalReadOnly && (
+            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
+              <Button
+                variant="contained"
+                onClick={handleSave}
+                disabled={saving || !canEditPersonal}
+                startIcon={saving ? <CircularProgress size={16} /> : null}
+              >
+                Guardar cambios
+              </Button>
+            </Box>
+          )}
+        </Paper>
       )}
 
       {/* Credentials */}
@@ -414,7 +407,7 @@ const Datos = () => {
 
         <Divider sx={{ mb: 2 }} />
 
-        {!canEdit ? (
+        {!canAnyCredentialAction ? (
           <Typography variant="caption" color="text.secondary">
             Modo lectura. No tienes permiso para ejecutar acciones.
           </Typography>
@@ -450,7 +443,10 @@ const Datos = () => {
               variant="outlined"
               disabled={runningAction || !canInvalidateCache}
               onClick={() =>
-                runCredentialAction(() => datosService.invalidateCache(evUser.guid), 'Caché invalidada')
+                runCredentialAction(
+                  () => datosService.invalidateCache(evUser.guid),
+                  'Caché invalidada',
+                )
               }
             >
               Invalidar caché
@@ -459,12 +455,20 @@ const Datos = () => {
               variant="outlined"
               disabled={runningAction || !canUnblock}
               onClick={() =>
-                runCredentialAction(() => datosService.unblockUser(evUser.guid), 'Usuario desbloqueado')
+                runCredentialAction(
+                  () => datosService.unblockUser(evUser.guid),
+                  'Usuario desbloqueado',
+                )
               }
             >
               Desbloquear usuario
             </Button>
-            <Button variant="outlined" color="error" disabled={runningAction || !canDelete} onClick={confirmDeleteUser}>
+            <Button
+              variant="outlined"
+              color="error"
+              disabled={runningAction || !canDelete}
+              onClick={confirmDeleteUser}
+            >
               Eliminar usuario
             </Button>
           </Stack>
@@ -479,7 +483,7 @@ const Datos = () => {
         <Typography variant="h6" sx={{ mt: 0.25, mb: 1.5 }}>
           NIF / NIE
         </Typography>
-        {!canEdit ? (
+        {!canAnyNifAction ? (
           <Typography variant="caption" color="text.secondary">
             Modo lectura. No tienes permiso para ejecutar acciones.
           </Typography>

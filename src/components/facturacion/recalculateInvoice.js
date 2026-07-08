@@ -8,8 +8,7 @@ const MILLISECONDS_PER_YEAR = 365 * 24 * 60 * 60 * 1000;
 
 // The GET returns ISO datetime strings for start/end; the native date input
 // works in "YYYY-MM-DD". Convert both ways.
-export const toDateInputValue = (isoValue) =>
-  isoValue ? String(isoValue).slice(0, 10) : '';
+export const toDateInputValue = (isoValue) => (isoValue ? String(isoValue).slice(0, 10) : '');
 
 // Build editable line state from the recalculate-data payload. Each line keeps
 // the editable fields (base, ivaPercentage, startDate, endDate) plus the

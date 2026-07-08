@@ -3,36 +3,20 @@ import { useSelector } from 'react-redux';
 import { Alert, Box, Paper, Typography } from '@mui/material';
 import { useSnackbar } from 'notistack';
 import { selectCustomer } from '@/common/features/customer/customerSlice';
-import { useHasPrivilege } from '@/common/permissions/useHasPrivilege';
 import { useActionAllowed } from '@/common/permissions/permissions';
-import { Priv } from '@/common/permissions/privileges';
 import { ModalContext } from '@/common/providers/ModalProvider';
 import telemarketingService from '@/services/telemarketing.service';
 import SendOfferForm from '@/components/suscripciones/SendOfferForm';
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-// El backend devuelve 403 con { errorMessage } en caso de fallo (mismo formato que
-// crear-usuario): el error de http.js trae "<status>: <body JSON>".
-const readErrorMessage = (error) => {
-  const rawMessage = error?.message || '';
-  const jsonPart = rawMessage.slice(rawMessage.indexOf('{'));
-  try {
-    return JSON.parse(jsonPart).errorMessage || rawMessage;
-  } catch {
-    return rawMessage;
-  }
-};
-
 const SuscCrear = () => {
   const { enqueueSnackbar } = useSnackbar();
   const modal = useContext(ModalContext);
   const customer = useSelector(selectCustomer);
-  // Enviar oferta combina el privilegio de edición con la acción (default-deny).
+  // Enviar oferta se gatea por la acción (default-deny, rol activo).
   // OJO: el fichero vive en suscripciones/crear pero la clave es herramientas.sendOffer.
-  const hasEditPriv = useHasPrivilege(Priv.EDIT_SUSCRIPCIONES);
-  const canSendOffer = useActionAllowed('herramientas.sendOffer');
-  const canEdit = hasEditPriv && canSendOffer;
+  const canEdit = useActionAllowed('herramientas.sendOffer');
 
   const evUser = customer?.raw?.evUser || {};
   const guid = evUser.guid;
@@ -110,7 +94,7 @@ const SuscCrear = () => {
           enqueueSnackbar('Oferta enviada correctamente', { variant: 'success' });
           resetForm();
         } catch (error) {
-          enqueueSnackbar('Error al enviar la oferta: ' + readErrorMessage(error), {
+          enqueueSnackbar('Error al enviar la oferta: ' + error.message, {
             variant: 'error',
           });
         } finally {

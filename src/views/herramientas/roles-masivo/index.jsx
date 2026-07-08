@@ -14,9 +14,7 @@ import {
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import DownloadIcon from '@mui/icons-material/Download';
 import { useSnackbar } from 'notistack';
-import { useHasPrivilege } from '@/common/permissions/useHasPrivilege';
 import { useActionAllowed } from '@/common/permissions/permissions';
-import { Priv } from '@/common/permissions/privileges';
 import { sortByText } from '@/common/sort';
 import rolesService from '@/services/roles.service';
 
@@ -24,7 +22,11 @@ const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 // Fichero de ejemplo (una fila por GUID o por Email, sin cabecera — como espera el backend).
 const EXAMPLE_ROWS = {
-  guid: ['3fa85f64-5717-4562-b3fc-2c963f66afa6', '16fd2706-8baf-433b-82eb-8c7fada847da', '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d'],
+  guid: [
+    '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+    '16fd2706-8baf-433b-82eb-8c7fada847da',
+    '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d',
+  ],
   email: ['usuario1@ejemplo.com', 'usuario2@ejemplo.com', 'usuario3@ejemplo.com'],
 };
 
@@ -52,10 +54,8 @@ const CONTENT_OPTIONS = [
 
 const RolesMasivo = () => {
   const { enqueueSnackbar } = useSnackbar();
-  // Edición combinada con el gating por ACCIÓN (default-deny).
-  const hasEditPriv = useHasPrivilege(Priv.EDIT_HERRAMIENTAS);
-  const canRolesMasivo = useActionAllowed('herramientas.rolesMasivo');
-  const canEdit = hasEditPriv && canRolesMasivo;
+  // Gating por ACCIÓN (default-deny, rol activo).
+  const canEdit = useActionAllowed('herramientas.rolesMasivo');
 
   const [csvFile, setCsvFile] = useState(null);
   const [email, setEmail] = useState('');
@@ -130,10 +130,9 @@ const RolesMasivo = () => {
       formData.append('roleSelected', roleSelected.trim());
       formData.append('contentOption', contentOption);
       await rolesService.assignMassive(formData);
-      enqueueSnackbar(
-        'Fichero enviado. Se procesará y recibirás el resultado por email.',
-        { variant: 'success' },
-      );
+      enqueueSnackbar('Fichero enviado. Se procesará y recibirás el resultado por email.', {
+        variant: 'success',
+      });
       resetForm();
     } catch (error) {
       enqueueSnackbar('Error al subir el fichero: ' + error.message, { variant: 'error' });
@@ -152,8 +151,8 @@ const RolesMasivo = () => {
           Asignación masiva de roles
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          Sube un CSV (UTF-8) con la lista de GUIDs o Emails. El proceso es asíncrono
-          y el resultado se envía por email.
+          Sube un CSV (UTF-8) con la lista de GUIDs o Emails. El proceso es asíncrono y el resultado
+          se envía por email.
         </Typography>
       </Box>
 
@@ -190,7 +189,12 @@ const RolesMasivo = () => {
                     type="button"
                     onClick={() => downloadExample('email')}
                     underline="hover"
-                    sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: '0.8125rem' }}
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      fontSize: '0.8125rem',
+                    }}
                   >
                     <DownloadIcon fontSize="inherit" />
                     Descargar template emails
@@ -200,7 +204,12 @@ const RolesMasivo = () => {
                     type="button"
                     onClick={() => downloadExample('guid')}
                     underline="hover"
-                    sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: '0.8125rem' }}
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      fontSize: '0.8125rem',
+                    }}
                   >
                     <DownloadIcon fontSize="inherit" />
                     Descargar template GUIDs

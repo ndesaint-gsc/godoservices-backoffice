@@ -1,23 +1,26 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import authService from '@/services/auth.service';
+import { consoleAuthService } from '@/services/console';
 import operatorService from '@/services/operator.service';
+
+const EMPTY_PERMISSIONS = { tabs: {}, actions: {}, fields: {} };
 
 const initialState = {
   isAuthenticated: false,
   isLoading: false,
-  user: null,
   error: null,
-  // Rol + permisos resueltos por el backend (…/web-and-console-integrations/auth/me). null = aún no cargados.
+  user: null,
+  availableRoles: [],
   role: null,
   permissions: null,
 };
 
+// Login real contra Evolok (2 pasos). Devuelve operador + snapshot de sesión.
 export const loginUser = createAsyncThunk(
   'auth/loginUser',
   async ({ email, password }, { rejectWithValue }) => {
     try {
-      const user = await authService.login({ email, password });
-      return user;
+      const { operator, sessionId, guid, groups } = await consoleAuthService.login(email, password);
+      return { operator, session: { sessionId, guid, groups } };
     } catch (err) {
       return rejectWithValue(err?.message || 'Login failed');
     }
@@ -25,18 +28,21 @@ export const loginUser = createAsyncThunk(
 );
 
 export const logout = createAsyncThunk('auth/logout', async () => {
-  await authService.logout();
+  consoleAuthService.logout();
 });
 
-// Carga operador + roles (Evolok directo) + mapa de privilegios (backend por rol).
-// roleOverride: solo DEV (el switcher de rol) para previsualizar permisos de cada rol.
 export const loadPermissions = createAsyncThunk(
   'auth/loadPermissions',
-  async (roleOverride, { rejectWithValue }) => {
+  async (activeRole, { rejectWithValue }) => {
     try {
-      const { operator, roles } = await operatorService.getOperator(roleOverride);
-      const permissions = await operatorService.resolvePermissions(roles);
-      return { operator, roles, permissions };
+      const { operator, roles } = await operatorService.getOperator();
+      const availableRoles = roles || [];
+      const role =
+        activeRole && availableRoles.includes(activeRole) ? activeRole : availableRoles[0] || null;
+      const permissions = role
+        ? await operatorService.resolvePermissions([role])
+        : EMPTY_PERMISSIONS;
+      return { operator, availableRoles, role, permissions };
     } catch (err) {
       return rejectWithValue(err?.message || 'No se pudieron cargar los permisos');
     }
@@ -47,13 +53,6 @@ const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    setRoles: (state, action) => {
-      if (state.user) state.user.roles = action.payload;
-    },
-    setUser: (state, action) => {
-      state.user = action.payload;
-      state.isAuthenticated = true;
-    },
     clearUser: (state) => {
       state.user = null;
       state.isAuthenticated = false;
@@ -67,34 +66,32 @@ const authSlice = createSlice({
       })
       .addCase(loginUser.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload;
+        state.user = action.payload.operator;
+        state.session = action.payload.session;
         state.isAuthenticated = true;
         state.error = null;
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.isLoading = false;
         state.user = null;
+        state.session = null;
         state.isAuthenticated = false;
         state.error = action.payload || action.error?.message || 'Login failed';
       })
       .addCase(loadPermissions.fulfilled, (state, action) => {
-        // roles vienen de Evolok (directo); permissions es el mapa fusionado del backend.
-        const roles = action.payload?.roles || [];
-        state.role = roles[0] || null;
-        state.permissions = action.payload?.permissions || null;
-        const operator = action.payload?.operator;
-        if (operator) {
-          state.user = { ...operator, roles };
-        } else if (state.user) {
-          state.user = { ...state.user, roles };
-        }
+        state.availableRoles = action.payload.availableRoles;
+        state.role = action.payload.role;
+        state.permissions = action.payload.permissions;
+        if (action.payload.operator) state.user = action.payload.operator;
       })
       .addCase(logout.fulfilled, (state) => {
         state.role = null;
         state.permissions = null;
+        state.session = null;
+        state.availableRoles = [];
       });
   },
 });
 
-export const { setRoles, setUser, clearUser } = authSlice.actions;
+export const { clearUser } = authSlice.actions;
 export default authSlice.reducer;

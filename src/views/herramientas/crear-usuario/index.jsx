@@ -11,9 +11,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useSnackbar } from 'notistack';
-import { useHasPrivilege } from '@/common/permissions/useHasPrivilege';
 import { useActionAllowed } from '@/common/permissions/permissions';
-import { Priv } from '@/common/permissions/privileges';
 import { ModalContext } from '@/common/providers/ModalProvider';
 import toolsService from '@/services/tools.service';
 
@@ -25,24 +23,11 @@ const BRANDS = [
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-const readErrorMessage = (error) => {
-  const rawMessage = error?.message || '';
-  const jsonPart = rawMessage.slice(rawMessage.indexOf('{'));
-  try {
-    return JSON.parse(jsonPart).errorMessage || rawMessage;
-  } catch {
-    return rawMessage;
-  }
-};
-
 const CrearUsuario = () => {
   const { enqueueSnackbar } = useSnackbar();
   const modal = useContext(ModalContext);
-  // Edición combinada con el gating por ACCIÓN (default-deny). Ambos hooks se llaman
-  // siempre (no en cortocircuito) para no romper el orden de hooks de React.
-  const hasEditPriv = useHasPrivilege(Priv.EDIT_HERRAMIENTAS);
-  const canCreateUser = useActionAllowed('herramientas.createUser');
-  const canEdit = hasEditPriv && canCreateUser;
+  // Gating por ACCIÓN (default-deny, rol activo).
+  const canEdit = useActionAllowed('herramientas.createUser');
 
   const [email, setEmail] = useState('');
   const [brand, setBrand] = useState('LV');
@@ -68,7 +53,7 @@ const CrearUsuario = () => {
           setBrand('LV');
           setTouched(false);
         } catch (error) {
-          enqueueSnackbar('Error al crear usuario: ' + readErrorMessage(error), { variant: 'error' });
+          enqueueSnackbar('Error al crear usuario: ' + error.message, { variant: 'error' });
         } finally {
           setCreating(false);
         }

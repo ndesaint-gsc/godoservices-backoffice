@@ -16,8 +16,6 @@ import {
   Typography,
 } from '@mui/material';
 import { loginUser } from '@/common/features/auth/authSlice';
-import { getLandingRoute } from '@/common/router/getLandingRoute';
-import { selectHasCustomer } from '@/common/features/customer/customerSlice';
 
 const schema = yup.object({
   email: yup.string().required('El email es obligatorio').email('Email no válido'),
@@ -29,7 +27,6 @@ const Login = () => {
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
   const { isAuthenticated, isLoading, error, user } = useSelector((state) => state.auth);
-  const hasCustomer = useSelector(selectHasCustomer);
 
   const {
     register,
@@ -42,9 +39,9 @@ const Login = () => {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      navigate(getLandingRoute(user.roles, hasCustomer), { replace: true });
+      navigate('/', { replace: true });
     }
-  }, [isAuthenticated, user, hasCustomer, navigate]);
+  }, [isAuthenticated, user, navigate]);
 
   useEffect(() => {
     if (error) {
@@ -73,7 +70,7 @@ const Login = () => {
             Iniciar sesión
           </Typography>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-            MVP: el login acepta cualquier email/password.
+            Accede con tu cuenta.
           </Typography>
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
             <Stack spacing={2}>

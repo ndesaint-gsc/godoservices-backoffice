@@ -6,6 +6,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const target = env.VITE_BO_PROXY_TARGET || 'https://www.lavanguardia.biz';
   const sessionId = env.VITE_BO_SESSION_ID || '';
+  const evolokTarget = env.VITE_EVOLOK_PROXY_TARGET || 'https://ev.lavanguardia.biz';
 
   return {
     plugins: [react()],
@@ -18,6 +19,11 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       strictPort: true,
       proxy: {
+        '/ic': {
+          target: evolokTarget,
+          changeOrigin: true,
+          secure: false,
+        },
         '/perfil': {
           target,
           changeOrigin: true,

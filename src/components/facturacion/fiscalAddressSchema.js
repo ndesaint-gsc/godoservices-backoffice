@@ -32,8 +32,14 @@ export const fiscalSchema = yup.object({
   document_id: yup.string().trim().required('El documento es obligatorio'),
   billing_email: yup.string().trim().email('Email no válido'),
   address1_first_name: yup.string().trim().required('El nombre o razón social es obligatorio'),
-  address1_last_name_first: requiredForNif(yup.string().trim(), 'El primer apellido es obligatorio'),
-  address1_last_name_second: requiredForNif(yup.string().trim(), 'El segundo apellido es obligatorio'),
+  address1_last_name_first: requiredForNif(
+    yup.string().trim(),
+    'El primer apellido es obligatorio',
+  ),
+  address1_last_name_second: requiredForNif(
+    yup.string().trim(),
+    'El segundo apellido es obligatorio',
+  ),
   address1_street_type: yup.string().required('Selecciona el tipo de vía'),
   address1_street_name: yup.string().trim().required('La vía es obligatoria'),
   address1_street_number: yup.string().trim().required('El número es obligatorio'),

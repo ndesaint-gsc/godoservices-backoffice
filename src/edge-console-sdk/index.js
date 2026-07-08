@@ -16,20 +16,27 @@
 
 import { createConsoleClient, ConsoleError } from './client';
 import { createAuthApi } from './auth';
+import { createAuthService } from './auth.service';
 import { createPrivilegesApi } from './privileges';
 import * as verify from './verify';
 import * as keys from './keys';
 
 export function createConsole(config = {}) {
   const client = createConsoleClient(config);
+  const authService = config.evolok
+    ? createAuthService({ ...config.evolok, onUnauthorized: config.onUnauthorized })
+    : null;
+  // Explicit config override (tests/dev) wins; otherwise the real authService's getEvolokSession.
+  const getEvolokSession =
+    config.getEvolokSession || (authService ? authService.getEvolokSession : undefined);
   return {
     client,
     consoleId: config.consoleId,
-    auth: createAuthApi(config),
-    // Carga el mapa de privilegios (fusionado) para los roles dados. Los roles vienen de Evolok.
+    authService,
+    auth: createAuthApi({ ...config, getEvolokSession }),
     privileges: createPrivilegesApi(client),
-    verify, // funciones puras sobre un snapshot de permisos
-    keys, // Role / Tab / Priv / hasPrivilege
+    verify,
+    keys,
   };
 }
 

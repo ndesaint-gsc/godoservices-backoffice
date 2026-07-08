@@ -19,7 +19,11 @@ export function createConsolesApi(client, consoleId) {
     // Edición (god): todos los campos. apiKey vacío = conservar la actual. Si cambia product/console,
     // el consoleId cambia (rename). Devuelve la vista con apikey enmascarada.
     update: (consoleId, { product, console, godEmail, apiKey }) =>
-      client.put(CONSOLES + `/${enc(consoleId)}`, { product, console, godEmail, apiKey }, { params: app }),
+      client.put(
+        CONSOLES + `/${enc(consoleId)}`,
+        { product, console, godEmail, apiKey },
+        { params: app },
+      ),
     // Baja por consoleId.
     remove: (consoleIdToRemove) =>
       client.del(CONSOLES + `/${enc(consoleIdToRemove)}`, { params: app }),

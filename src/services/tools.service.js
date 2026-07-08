@@ -7,7 +7,9 @@ const toQueryString = (params) => '?' + new URLSearchParams(params).toString();
 //   200 -> { purchaseId, accountId }   404 -> not found   409 -> multiple matches
 // Returns a structured result so the view can show the right message per status.
 const findPurchaseByExternalId = async (externalId) => {
-  const response = await fetch(apiUrl('/perfil/console/user/purchase' + toQueryString({ externalId })));
+  const response = await fetch(
+    apiUrl('/perfil/console/user/purchase' + toQueryString({ externalId })),
+  );
   if (response.status === 404) return { status: 'notFound' };
   if (response.status === 409) return { status: 'multiple' };
   if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);

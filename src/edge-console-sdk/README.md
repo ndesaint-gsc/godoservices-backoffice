@@ -4,12 +4,14 @@ Módulo **independiente** (sin redux/MUI, con sus propios clientes de endpoint) 
 consola/backoffice con el sistema Godó. Contrato en [`CONTRACT.md`](./CONTRACT.md).
 
 **Dos SDK sobre un mismo núcleo** (`client`/`keys`/`verify` compartidos):
+
 - **`createConsole`** (`@/edge-console-sdk`) — **CONSUMIDOR**: lo que se entrega a un tercero. Consume
   auth/roles/privilegios; no administra nada.
 - **`createConsoleAdmin`** (`@/edge-console-administrator`) — **ADMINISTRACIÓN**: solo la consola
   mentor (godoservices). Administra roles/privilegios/catálogo + consolas de la plataforma.
 
 **Modelo:**
+
 - **Auth del operador + roles → DIRECTO contra Evolok** (la app pasa `getEvolokSession`, que reusa el IC
   web). El SDK quita el prefijo `{consoleId}-` de los grupos → roles pelados.
 - **Backend**: consumo en plano `…/client/**` (apikey del producto vía proxy); admin en `…/admin/**`
@@ -61,16 +63,16 @@ import { createConsoleAdmin } from '@/edge-console-administrator';
 const admin = createConsoleAdmin({ consoleId: 'welcome-console' });
 
 // Admin de roles/privilegios (apikey inyectada por el proxy):
-const editor = await admin.admin.getPermissions();          // { roles, tabs, actions, fields, permissions }
+const editor = await admin.admin.getPermissions(); // { roles, tabs, actions, fields, permissions }
 await admin.admin.savePermissions('EDITOR', { tabs, actions, fields });
 await admin.admin.roles.create('editor', 'Editor de contenidos'); // description obligatoria (GOD reservado)
 await admin.admin.roles.remove('editor');
 
 // Admin de consolas de la plataforma + config técnica del god (enforcement por sesión Evolok):
-const consoles = await admin.consoles.list();                          // apikey enmascarada
+const consoles = await admin.consoles.list(); // apikey enmascarada
 const created = await admin.consoles.create('running', 'console', 'god@grupogodo.com'); // created.apiKey una vez
 await admin.consoles.remove('running-console');
-const myConfig = await admin.consoles.mine();               // { consoleId, rolePrefix, godGroup, apiKey, … }
+const myConfig = await admin.consoles.mine(); // { consoleId, rolePrefix, godGroup, apiKey, … }
 ```
 
 **Modelo god / admin de integración:** cada consola tiene un god (grupo Evolok `{consoleId}-god` → rol

@@ -25,7 +25,7 @@ const initialForm = (typeDef, item) => {
   const form = {};
   typeDef.fields.forEach((field) => {
     const value = item ? item[field.name] : undefined;
-    form[field.name] = field.type === FIELD_KINDS.BOOL ? !!value : value ?? '';
+    form[field.name] = field.type === FIELD_KINDS.BOOL ? !!value : (value ?? '');
   });
   return form;
 };
@@ -79,7 +79,7 @@ const RetentionEditDialog = ({ open, typeDef, item, index, tenant, onClose, onSa
     const body = { index: String(index), tenant };
     typeDef.fields.forEach((field) => {
       const value = form[field.name];
-      body[field.name] = field.type === FIELD_KINDS.BOOL ? String(!!value) : value ?? '';
+      body[field.name] = field.type === FIELD_KINDS.BOOL ? String(!!value) : (value ?? '');
     });
     try {
       await retentionService.updateContent(typeDef.apiType, body);

@@ -59,7 +59,11 @@ const FiscalAddressForm = ({ control, errors, isLegalPerson, disabled }) => {
         <ControlledField {...fieldProps} name="address1_last_name_first" label="Primer apellido" />
       )}
       {!isLegalPerson && (
-        <ControlledField {...fieldProps} name="address1_last_name_second" label="Segundo apellido" />
+        <ControlledField
+          {...fieldProps}
+          name="address1_last_name_second"
+          label="Segundo apellido"
+        />
       )}
       <ControlledField {...fieldProps} name="address1_street_type" label="Tipo de vía" select>
         <MenuItem value="">

@@ -19,9 +19,7 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import { useSnackbar } from 'notistack';
-import { useHasPrivilege } from '@/common/permissions/useHasPrivilege';
 import { useActionAllowed } from '@/common/permissions/permissions';
-import { Priv } from '@/common/permissions/privileges';
 import { ModalContext } from '@/common/providers/ModalProvider';
 import { sortByText } from '@/common/sort';
 import landingsService from '@/services/landings.service';
@@ -31,10 +29,10 @@ const isHtmlFile = (file) => !!file && /\.html?$/i.test(file.name);
 const HtLandings = () => {
   const { enqueueSnackbar } = useSnackbar();
   const modal = useContext(ModalContext);
-  const canEdit = useHasPrivilege(Priv.EDIT_HERRAMIENTAS);
-  // Gating por ACCIÓN (default-deny): subir y borrar son acciones distintas.
+  // Gating por ACCIÓN (default-deny, rol activo): subir y borrar son acciones distintas.
   const canLandingUpload = useActionAllowed('herramientas.landingUpload');
   const canLandingDelete = useActionAllowed('herramientas.landingDelete');
+  const canManageLandings = canLandingUpload || canLandingDelete;
 
   const [landings, setLandings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -135,46 +133,46 @@ const HtLandings = () => {
         </Typography>
       </Box>
 
-      {!canEdit ? (
+      {!canManageLandings ? (
         <Alert severity="info" variant="outlined">
           No tienes permiso para esta acción.
         </Alert>
       ) : (
         <Stack spacing={3}>
           {canLandingUpload && (
-          <Paper variant="outlined" sx={{ p: { xs: 3, md: 4 }, maxWidth: 520 }}>
-            <Typography variant="h6" sx={{ mb: 1.5 }}>
-              Subir landing
-            </Typography>
-            <Box component="form" onSubmit={handleUpload}>
-              <Stack spacing={2.5}>
-                <Box>
-                  <Button
-                    component="label"
-                    variant="outlined"
-                    startIcon={<UploadFileIcon />}
-                    disabled={uploading}
-                  >
-                    Seleccionar HTML
-                    <input type="file" accept=".html,.htm" hidden onChange={handleFileChange} />
-                  </Button>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                    {htmlFile ? htmlFile.name : 'Ningún fichero seleccionado'}
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    disabled={!canSubmit}
-                    startIcon={uploading ? <CircularProgress size={16} /> : null}
-                  >
-                    Subir
-                  </Button>
-                </Box>
-              </Stack>
-            </Box>
-          </Paper>
+            <Paper variant="outlined" sx={{ p: { xs: 3, md: 4 }, maxWidth: 520 }}>
+              <Typography variant="h6" sx={{ mb: 1.5 }}>
+                Subir landing
+              </Typography>
+              <Box component="form" onSubmit={handleUpload}>
+                <Stack spacing={2.5}>
+                  <Box>
+                    <Button
+                      component="label"
+                      variant="outlined"
+                      startIcon={<UploadFileIcon />}
+                      disabled={uploading}
+                    >
+                      Seleccionar HTML
+                      <input type="file" accept=".html,.htm" hidden onChange={handleFileChange} />
+                    </Button>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                      {htmlFile ? htmlFile.name : 'Ningún fichero seleccionado'}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={!canSubmit}
+                      startIcon={uploading ? <CircularProgress size={16} /> : null}
+                    >
+                      Subir
+                    </Button>
+                  </Box>
+                </Stack>
+              </Box>
+            </Paper>
           )}
 
           <Paper variant="outlined" sx={{ p: { xs: 3, md: 4 } }}>
