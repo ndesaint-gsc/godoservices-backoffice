@@ -197,18 +197,38 @@ GET    …/consoles/mine?app=    (configuracion.view)   -> { consoleId, product,
     perderla nunca. El registry de consolas además se **siembra** de la propiedad `console.products`
     (`.properties`: `consoleId:product:appconsole:apiKey:godEmail;…`) o del default `welcome-console`.
 
-## Cliente — DOS SDK sobre un mismo núcleo
+## Cliente — un NÚCLEO neutral + dos SDK independientes
 
-El paquete `edge-console-sdk` expone **dos factories** que comparten núcleo (`client`/`keys`/`verify`),
-para separar lo que se entrega a un tercero de la administración de la consola mentor:
+El framework cliente se entrega en **tres paquetes JS**. El núcleo neutral `edge-console-core` contiene
+el cliente HTTP, el modelo de claves y la base de rutas; **ambos SDK dependen del núcleo, NO entre sí**
+(el consumidor se entrega/versiona sin arrastrar la administración, y viceversa):
 
-| SDK                                    | Factory              | Import                         | Para                                        | Backend                        | Auth                    |
-| -------------------------------------- | -------------------- | ------------------------------ | ------------------------------------------- | ------------------------------ | ----------------------- |
-| **edge-console-sdk** (consumidor)      | `createConsole`      | `@/edge-console-sdk`           | terceros: consumir auth/roles/privilegios   | `…/client/**`                  | apikey producto (proxy) |
-| **edge-console-administrator** (admin) | `createConsoleAdmin` | `@/edge-console-administrator` | godoservices (mentor): administrar consolas | `…/admin/**` + `…/consoles/**` | apikey / sesión         |
+```
+                 edge-console-core
+        (client · keys · paths BASE · ConsoleError)
+              ▲                        ▲
+     edge-console-sdk        edge-console-administrator      ← sin arista sdk ↔ administrator
+     (consumidor)             (mentor / admin)
+```
+
+| Paquete                                | Contenido                                                   | Factory              | Import                         | Para                                        | Backend                        | Auth                    |
+| -------------------------------------- | ----------------------------------------------------------- | -------------------- | ------------------------------ | ------------------------------------------- | ------------------------------ | ----------------------- |
+| **edge-console-core**                  | `client`, `keys`, `paths`(BASE), `ConsoleError`             | —                    | `@/edge-console-core`          | núcleo compartido (no se usa suelto)        | —                              | —                       |
+| **edge-console-sdk** (consumidor)      | núcleo + `auth`(Evolok) + `privileges.resolve` + `verify` + `react/` | `createConsole`      | `@/edge-console-sdk`           | terceros: consumir auth/roles/privilegios   | `…/client/**`                  | apikey producto (proxy) |
+| **edge-console-administrator** (admin) | núcleo + `admin`(roles/privilegios/catálogo) + `consoles`   | `createConsoleAdmin` | `@/edge-console-administrator` | godoservices (mentor): administrar consolas | `…/admin/**` + `…/consoles/**` | apikey / sesión         |
+
+> El núcleo **no se entrega suelto** a un tercero: a un tercero se le da solo `edge-console-sdk`; el
+> `edge-console-administrator` sigue siendo **mentor-only**.
 
 **Permisos en ambos**: el consumidor los **lee/verifica** (`resolve` + `verify`); el admin los **define**
-(`savePermissions`/`catalog`). Mismo `keys.js` → un único modelo (`Tab`/`Action`/`Naming`/`RESERVED_*`).
+(`savePermissions`/`catalog`). Mismo `keys` (del núcleo) → un único modelo (`Tab`/`Action`/`Naming`/`RESERVED_*`).
+
+> **Fase futura (no hecha) — dissociar capas app/vista/servicio de la consola mentor**: separar el
+> módulo admin (vistas `integraciones`/`permisos`/`configuracion` + `integrations.service`/
+> `permissionsAdmin.service` + el singleton `adminSdk`) del operador (datos/suscripciones/notificaciones/
+> facturación/herramientas), ambos sobre un core de app compartido, para que `welcome-console` (operador,
+> referencia consumidor) y `edge-admin-console` (admin del mentor) puedan ser apps independientes. Fuera
+> del alcance del desacople de SDK de arriba.
 
 ```js
 // --- edge-console-sdk (CONSUMIDOR / tercero) ---
