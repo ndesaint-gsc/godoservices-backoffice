@@ -5,7 +5,7 @@
 
 import { useConsole } from './context';
 import { tabVisible, actionAllowed, fieldMode } from '../verify';
-import { hasPrivilege } from '../keys';
+import { hasPrivilege } from '@/edge-console-core/keys';
 
 export const useTabVisible = (tabKey) => tabVisible(useConsole().permissions, tabKey);
 export const useActionAllowed = (actionKey) => actionAllowed(useConsole().permissions, actionKey);

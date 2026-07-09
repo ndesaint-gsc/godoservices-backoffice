@@ -14,12 +14,12 @@
 //   const permissions = await sdk.privileges.resolve(roles);
 //   sdk.verify.actionAllowed(permissions, 'datos.delete');
 
-import { createConsoleClient, ConsoleError } from './client';
+import { createConsoleClient, ConsoleError } from '@/edge-console-core';
 import { createAuthApi } from './auth';
 import { createAuthService } from './auth.service';
 import { createPrivilegesApi } from './privileges';
 import * as verify from './verify';
-import * as keys from './keys';
+import * as keys from '@/edge-console-core/keys';
 
 export function createConsole(config = {}) {
   const client = createConsoleClient(config);
@@ -41,5 +41,5 @@ export function createConsole(config = {}) {
 }
 
 export { createConsoleClient, ConsoleError, verify, keys };
-export { BASE, CLIENT } from './paths'; // BASE lo reusa el paquete edge-console-administrator
-export * from './keys';
+export { BASE, CLIENT } from './paths'; // BASE viene del núcleo (edge-console-core), re-exportada aquí
+export * from '@/edge-console-core/keys';
