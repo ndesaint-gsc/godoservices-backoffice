@@ -50,7 +50,7 @@ const Permisos = () => {
     setLoading(true);
     try {
       const [data, roles] = await Promise.all([
-        permissionsAdminService.getAll(APP_ID),
+        permissionsAdminService.getAll(),
         permissionsAdminService.listRoles(),
       ]);
       // Solo rolename pelado + descripción; el prefijo Evolok ({product}-{console}-) se oculta en JS.
@@ -91,7 +91,7 @@ const Permisos = () => {
   const onSave = async () => {
     setSaving(true);
     try {
-      await permissionsAdminService.save(APP_ID, role, draft);
+      await permissionsAdminService.save(role, draft);
       enqueueSnackbar('Permisos guardados (en memoria del backend)', { variant: 'success' });
       await load(role);
     } catch (error) {

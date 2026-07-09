@@ -1,11 +1,12 @@
 // Administración del registry de permisos (editor /permisos). Delega en el edge-console-sdk (plano sesión).
 import { adminSdk } from '@/services/console';
 
-// GET …/web-and-console-integrations/auth/permissions -> { roles, tabs, actions, fields, permissions }
-const getAll = (app) => adminSdk.admin.getPermissions();
+// GET …/admin/permissions -> { roles, tabs, actions, fields, permissions }. La consola la resuelve el
+// backend por la apikey del proxy, no por parámetro.
+const getAll = () => adminSdk.admin.getPermissions();
 
-// PUT …/web-and-console-integrations/auth/permissions?role=  body: { tabs, actions, fields }
-const save = (app, role, perms) => adminSdk.admin.savePermissions(role, perms);
+// PUT …/admin/privileges/{role}  body: { tabs, actions, fields }
+const save = (role, perms) => adminSdk.admin.savePermissions(role, perms);
 
 // Roles con metadata: [{ name, prefixedName, description }]. `name` = rolename pelado; `prefixedName`
 // = grupo en Evolok ({consoleId}-{ROL}). El backend pone/quita el prefijo.
