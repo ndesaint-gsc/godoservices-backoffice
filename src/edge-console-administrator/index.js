@@ -1,8 +1,8 @@
 // edge-console-administrator — paquete de ADMINISTRACIÓN (parte de godoservices-backoffice como consola
 // MENTOR; NO se entrega a terceros).
 //
-// Paquete SEPARADO que se apoya en el núcleo del edge-console-sdk (client/keys) y añade la administración
-// de consolas:
+// Paquete SEPARADO que se apoya en el núcleo neutral edge-console-core (client/keys) y añade la
+// administración de consolas:
 //   - admin    → roles/privilegios/catálogo + membresías. Plano …/admin/** (apikey vía proxy).
 //   - consoles → alta/baja/lista de consolas de la plataforma + config técnica del god (…/mine).
 //                Plano …/consoles/** (enforcement por sesión Evolok, NO apikey).
@@ -17,7 +17,7 @@
 //   await admin.admin.roles.create('editor', 'Editor de contenidos');
 //   const consoles = await admin.consoles.list();
 
-import { createConsoleClient, ConsoleError, keys } from '@/edge-console-sdk';
+import { createConsoleClient, ConsoleError, keys } from '@/edge-console-core';
 import { createAdminApi } from './admin';
 import { createConsolesApi } from './consoles';
 

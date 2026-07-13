@@ -1,5 +1,6 @@
-// edge-console-sdk/client.js
-// Cliente HTTP self-contained del edge-console-sdk (sin redux/MUI). Habla SOLO con el backend del framework
+// edge-console-core/client.js
+// Cliente HTTP self-contained del núcleo edge-console (sin redux/MUI). Compartido por edge-console-sdk
+// (consumidor) y edge-console-administrator (mentor). Habla SOLO con el backend del framework
 // (admin de roles/privilegios + carga del mapa por rol) bajo /perfil/welcome/web-and-console-integrations/admin.
 //
 // Auth del plano admin = apikey (X-Console-ApiKey). En la consola en navegador NO se pone la key: la

@@ -3,10 +3,12 @@
 Módulo **independiente** (sin redux/MUI, con sus propios clientes de endpoint) para integrar una
 consola/backoffice con el sistema Godó. Contrato en [`CONTRACT.md`](./CONTRACT.md).
 
-**Dos SDK sobre un mismo núcleo** (`client`/`keys`/`verify` compartidos):
+**Un núcleo neutral (`edge-console-core`) + dos SDK** que dependen de él, no entre sí:
 
+- **`edge-console-core`** (`@/edge-console-core`) — **NÚCLEO** compartido: `client`/`keys`/`paths`(BASE)/
+  `ConsoleError`. No se usa suelto ni se entrega a un tercero.
 - **`createConsole`** (`@/edge-console-sdk`) — **CONSUMIDOR**: lo que se entrega a un tercero. Consume
-  auth/roles/privilegios; no administra nada.
+  auth/roles/privilegios (+ `verify` + `react/`); no administra nada.
 - **`createConsoleAdmin`** (`@/edge-console-administrator`) — **ADMINISTRACIÓN**: solo la consola
   mentor (godoservices). Administra roles/privilegios/catálogo + consolas de la plataforma.
 
@@ -21,22 +23,27 @@ consola/backoffice con el sistema Godó. Contrato en [`CONTRACT.md`](./CONTRACT.
 ## Estructura
 
 ```
-edge-console-sdk/
-  client.js       createConsoleClient({ baseUrl, apiKey, onUnauthorized })   // apiKey solo S2S; en navegador la pone el proxy   ← núcleo
-  keys.js         Role, ALL_ROLES, Tab, Priv, hasPrivilege(roles,priv), Naming, RESERVED_*             ← núcleo
-  verify.js       tabVisible(perms,key), actionAllowed(perms,key), fieldMode(perms,key)   (puras)      ← núcleo
-  paths.js        BASE, CLIENT, ADMIN, CONSOLES
-  // --- consumidor (createConsole) ---
+edge-console-core/                                                          ← NÚCLEO (compartido por ambos SDK)
+  client.js       createConsoleClient({ baseUrl, apiKey, onUnauthorized }) + ConsoleError   // apiKey solo S2S; en navegador la pone el proxy
+  keys.js         Role, ALL_ROLES, Tab, Priv, hasPrivilege(roles,priv), Naming, RESERVED_*
+  paths.js        BASE
+  index.js        re-exporta client + keys + BASE
+
+edge-console-sdk/                                                           ← CONSUMIDOR (createConsole)
+  paths.js        CLIENT (deriva de BASE del núcleo)
   auth.js         getOperator(roleOverride) → { operator, roles }            // Evolok directo; quita prefijo
   privileges.js   resolve(roles) → { tabs, actions, fields }                 // …/client/** (apikey)
+  verify.js       tabVisible(perms,key), actionAllowed(perms,key), fieldMode(perms,key)   (puras)
   react/          <ConsoleProvider value={{permissions,role,roles}}>, useConsole(),
                   useTabVisible/useActionAllowed/useFieldMode/useHasPrivilege
   index.js        createConsole(config) → { client, auth, privileges, verify, keys }
-  // --- administración (createConsoleAdmin) ---
+
+edge-console-administrator/                                                 ← ADMINISTRACIÓN (createConsoleAdmin)
+  paths.js        ADMIN, CONSOLES (derivan de BASE del núcleo)
   admin.js        getPermissions(), savePermissions(role, perms),
                   roles.{list,create,update,remove,members}, catalog.{get,set}   // …/admin/** (apikey)
   consoles.js     list(), create(product,console,godEmail), update(id,…), remove(id), mine()  // …/consoles/** (sesión)
-  administrator.js createConsoleAdmin(config) → { client, admin, consoles, keys }
+  index.js        createConsoleAdmin(config) → { client, admin, consoles, keys }
 ```
 
 ## Interfaz de uso

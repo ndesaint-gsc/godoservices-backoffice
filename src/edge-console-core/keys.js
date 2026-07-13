@@ -1,4 +1,5 @@
-// edge-console-sdk/keys.js
+// edge-console-core/keys.js
+// Modelo de claves compartido por edge-console-sdk (consumidor) y edge-console-administrator (mentor).
 // Catálogo de claves del lado cliente (mirror del catálogo backend, que es el autoritativo y llega
 // por API en /auth/permissions o /console-admin/catalog). Centraliza aquí las claves que hoy viven
 // como strings sueltos por las vistas, para tener una única fuente de nombres.

@@ -3,7 +3,7 @@
 Paquete de **ADMINISTRACIÓN** de la consola mentor (godoservices-backoffice). **NO se entrega a
 terceros** (a un tercero se le da solo el [`edge-console-sdk`](../edge-console-sdk/README.md)).
 
-Se apoya en el núcleo del `edge-console-sdk` (`client`/`keys`) y añade:
+Se apoya en el núcleo neutral [`edge-console-core`](../edge-console-core/README.md) (`client`/`keys`) y añade:
 
 - **`admin`** — roles / privilegios / catálogo + membresías. Plano `…/admin/**` (apikey vía proxy).
 - **`consoles`** — alta/baja/lista de consolas de la plataforma + config técnica del god (`…/mine`).
